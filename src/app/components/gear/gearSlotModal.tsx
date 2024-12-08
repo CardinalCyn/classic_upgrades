@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useCallback, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useMemo,
+  useState,
+  useRef,
+  useEffect,
+} from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,18 +14,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search } from "lucide-react";
 import Image from "next/image";
-import { GearItem, GearSlotData } from "../utils/types";
-import gearData from "../utils/gearData.json";
-import gearDataSOM from "../utils/gearDataSOM.json";
-import { imageDomain } from "../utils/constants";
+import { GearSlotData } from "@/app/utils/types";
+import { imageDomain, WEB_DB_URL } from "@/app/utils/constants";
+import { gear, Gear } from "@/app/sim_lib/gear";
+import { gearSod } from "@/app/sim_lib/gear_sod";
 
 interface GearSelectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectGear: (gear: GearItem) => void;
+  onSelectGear: (gear: Gear) => void;
   gearSlot: GearSlotData;
 }
 
@@ -30,15 +35,15 @@ const GearSelectModal = ({
   gearSlot,
 }: GearSelectModalProps) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Memoize filtered gear to prevent unnecessary recalculations
-  const filteredGear = useMemo(() => {
+  const filteredGear: Gear[] = useMemo(() => {
     const gearSlotItems =
-      gearData[gearSlot.gearJsSlotName as keyof typeof gearData] || [];
-    const gearSOMSlotItems =
-      gearDataSOM[gearSlot.gearJsSlotName as keyof typeof gearDataSOM] || [];
+      gear[gearSlot.gearJsSlotName as keyof typeof gear] || [];
+    const gearSODSlotItems =
+      gearSod[gearSlot.gearJsSlotName as keyof typeof gearSod] || [];
 
-    const filteredSomGear = gearSOMSlotItems.filter((gear) =>
+    const filteredSODGear = gearSODSlotItems.filter((gear) =>
       gear.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
 
@@ -47,20 +52,24 @@ const GearSelectModal = ({
         gear.name.toLowerCase().includes(searchQuery.toLowerCase()),
       )
       .map((piece) => {
-        const somPiece = filteredSomGear.find(
+        const somPiece = filteredSODGear.find(
           (somGear) => somGear.name === piece.name,
         );
         return {
           ...piece,
           p: "p" in piece ? piece.p : somPiece?.p || "",
-        };
+        } as Gear; // Type assertion here
       })
-      .filter((gear) => gear.p); // Only return items with a valid 'p' property
+      .filter((gear) => gear.p);
   }, [searchQuery, gearSlot.gearJsSlotName]);
 
   const handleSelectGear = useCallback(
-    (gear: GearItem) => {
+    (
+      gear: Gear & { p?: any },
+      e: React.MouseEvent<HTMLDivElement, MouseEvent>,
+    ) => {
       try {
+        e.preventDefault();
         onSelectGear(gear);
         onClose();
       } catch (error) {
@@ -70,16 +79,23 @@ const GearSelectModal = ({
     [onSelectGear, onClose],
   );
 
+  // Effect to scroll to top when search query changes
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+  }, [searchQuery]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh]">
+      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Select {gearSlot.slotName}</DialogTitle>
           </div>
 
           <div className="relative mt-4">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-4 w-4" />
             <Input
               placeholder="Search gear..."
               value={searchQuery}
@@ -89,29 +105,36 @@ const GearSelectModal = ({
           </div>
         </DialogHeader>
 
-        <ScrollArea className="mt-4 max-h-[60vh]">
-          <div className="grid grid-cols-1 gap-2" key={"asdf"}>
+        <div
+          ref={scrollContainerRef}
+          className="mt-4 flex-grow overflow-y-auto"
+          style={{ height: "calc(80vh - 200px)" }}
+        >
+          <div className="grid grid-cols-1 gap-2">
             {filteredGear.map((gear) => {
-              if (!gear.p) return <></>;
-
+              if (!gear.p) return null;
               return (
                 <div
                   key={gear.id}
-                  onClick={() =>
-                    handleSelectGear({ imageId: gear.p, name: gear.name })
-                  }
-                  className="flex items-center p-3 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                  onClick={(e) => handleSelectGear(gear, e)}
+                  className="flex items-center p-3 rounded-lg cursor-pointer transition-colors hover:bg-secondary"
                 >
                   <div className="relative w-12 h-12 flex items-center justify-center rounded-full">
                     {gear.id ? (
-                      <Image
-                        src={imageDomain + `${gear.p}.jpg`}
-                        alt={gear.name || "Item icon"}
-                        width={56}
-                        height={56}
-                        className="object-contain rounded-lg"
-                        unoptimized
-                      />
+                      <a
+                        key={gear.id}
+                        href={`${WEB_DB_URL}${"item"}=${gear.id}`}
+                        onClick={(e) => e.preventDefault()}
+                      >
+                        <Image
+                          src={imageDomain + `${gear.p}.jpg`}
+                          alt={gear.name || "Item icon"}
+                          width={56}
+                          height={56}
+                          className="object-contain rounded-lg border-primary border"
+                          unoptimized
+                        />
+                      </a>
                     ) : (
                       <div className="w-12 h-12 bg-gray-200 rounded-lg" />
                     )}
@@ -130,7 +153,7 @@ const GearSelectModal = ({
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );

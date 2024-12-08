@@ -1,0 +1,194 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Buff,
+  buffs,
+  exposedArmorId,
+  improvedExposedArmorId,
+  leaderOfThePackId,
+  sebaciousId,
+} from "../sim_lib/buffs";
+import BuffIcon from "./buffIcon";
+import { ClassicMode } from "../utils/types";
+import { Rune } from "../sim_lib/runes";
+import { gladiatorStanceId } from "../utils/constants";
+import { title } from "process";
+
+type BuffsProps = {
+  classicMode: ClassicMode;
+  playerLevel: number;
+  initTargetArmor: number;
+  buffsSetup: (Buff & { active: boolean })[];
+  resetBuffs: () => void;
+  updateBuffSelection: (buffId: number, toggle: boolean) => void;
+  settingsSetup: {
+    [settingsFieldName: string]: {
+      checkbox?: boolean;
+      number?: number;
+      slider?: number;
+      dropdown?: string;
+    };
+  };
+  runesSetup: { [key: string]: (Rune & { active: boolean })[] };
+};
+
+function Buffs({
+  classicMode,
+  playerLevel,
+  initTargetArmor,
+  buffsSetup,
+  resetBuffs,
+  updateBuffSelection,
+  settingsSetup,
+  runesSetup,
+}: BuffsProps) {
+  const [targetArmor, setTargetArmor] = useState(initTargetArmor);
+  useEffect(() => {
+    let armor = initTargetArmor;
+    let improvedExposedArmorActive = buffsSetup.some(
+      (buff) => buff.id === improvedExposedArmorId && buff.active,
+    );
+
+    for (const buff of buffsSetup) {
+      if (!buff.active || !buff.armor || typeof buff.armor !== "number")
+        continue;
+
+      if (buff.id === exposedArmorId || buff.id === sebaciousId) {
+        armor -= improvedExposedArmorActive ? 1.5 * buff.armor : buff.armor;
+      } else if (buff.armor) {
+        armor -= buff.armor;
+      }
+    }
+
+    setTargetArmor(Math.max(armor, 0));
+  }, [buffsSetup, setTargetArmor]);
+
+  const BuffSections = [
+    {
+      title: "Raid Buffs",
+      filter: (buff: Buff) =>
+        (buff.group &&
+          [
+            "motw",
+            "trueshot",
+            "kings",
+            "blessingmight",
+            "windfury",
+            "graceair",
+            "strengthearth",
+          ].includes(buff.group)) ||
+        buff.motwmod ||
+        buff.mightmod ||
+        buff.id === leaderOfThePackId,
+    },
+    {
+      title: "World Buffs",
+      filter: (buff: Buff) => buff.worldbuff,
+    },
+    {
+      title: "Consumables",
+      filter: (buff: Buff) => buff.consume,
+    },
+    {
+      title: "Other",
+      filter: (buff: Buff) => buff.other,
+    },
+    {
+      title: `Target Armor: ${targetArmor}`,
+      filter: (buff: Buff) => {
+        return (
+          (buff.group && ["sunder", "faerie", "reck"].includes(buff.group)) ||
+          buff.id === improvedExposedArmorId
+        );
+      },
+    },
+    {
+      title: "Stances",
+      filter: (buff: Buff) => {
+        return (
+          buff.group === "stance" &&
+          (!buff.rune ||
+            runesSetup.feet.find(
+              (rune) => rune.id === gladiatorStanceId && rune.active === true,
+            ))
+        );
+      },
+    },
+    {
+      title: "Specializations",
+      filter: (buff: Buff) => {
+        return buff.skill;
+      },
+    },
+  ];
+
+  function levelFilter(buff: Buff): boolean {
+    const minLevel = buff.minlevel;
+    if (!minLevel && minLevel !== 0) return true;
+    if (buff.minlevel > playerLevel) return false;
+    const maxLevel = buff.maxlevel;
+    if (!maxLevel && maxLevel !== 0) return true;
+    if (playerLevel > maxLevel) return false;
+    return true;
+  }
+
+  function aqBooksFilter(buff: Buff): boolean {
+    if (!buff.aq && buff.aq !== false) return true;
+    return buff.aq === settingsSetup.aqbooks.checkbox;
+  }
+
+  return (
+    <Card className="border-none rounded-none shadow-none text-2xl font-bold mb-6 text-center flex flex-col items-center">
+      <CardHeader>
+        <CardTitle>Buffs</CardTitle>
+        <CardDescription className="pt-5 flex gap-4">
+          <Button onClick={resetBuffs}>Reset Buffs</Button>
+          <Button>Save Buffs</Button>
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="md:mx-32">
+        {BuffSections.map(({ title, filter }, index) => (
+          <div className="pb-10" key={title + index.toString()}>
+            <h1 className="text-center">{title}</h1>
+            <div
+              key={index.toString() + title}
+              className="text-sm flex flex-wrap gap-4"
+            >
+              {buffs
+                .filter((buff) =>
+                  classicMode === "Classic" ? !buff.sod : true,
+                )
+                .filter(levelFilter)
+                .filter(aqBooksFilter)
+                .filter(filter)
+                .map((buff) => {
+                  const foundBuff = buffsSetup.find(
+                    (buffSetupVal) => buff.id === buffSetupVal.id,
+                  );
+                  return foundBuff ? (
+                    <BuffIcon
+                      key={buff.id}
+                      buff={foundBuff}
+                      updateBuffSelection={updateBuffSelection}
+                      buffStatus={foundBuff.active}
+                    />
+                  ) : null;
+                })}
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+export default Buffs;
