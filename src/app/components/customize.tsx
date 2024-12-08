@@ -18,12 +18,38 @@ import { Buff, buffs } from "../sim_lib/buffs";
 import { Gear } from "../sim_lib/gear";
 import { Rune, runes } from "../sim_lib/runes";
 import Runes from "./runes";
+import { Spell, spells } from "../sim_lib/spells";
 
 type CustomizeProps = {
   classicMode: ClassicMode;
 };
 
 function Customize({ classicMode }: CustomizeProps) {
+  const [rotationSetup, setRotationSetup] = useState<Spell[]>(
+    spells.map((spell) => {
+      spell.active = false;
+      return spell;
+    }),
+  );
+
+  const resetRotation = () => {
+    setRotationSetup(
+      spells.map((spell) => {
+        return { ...spell };
+      }),
+    );
+  };
+
+  const handleRotationUpdate = (spellId: number, toggle: boolean) => {
+    setRotationSetup((prev) =>
+      prev.map((spell) => {
+        return spell.id === spellId
+          ? ({ ...spell, active: toggle } as Spell)
+          : spell;
+      }),
+    );
+  };
+
   const [gearSetup, setGearSetup] = useState<{
     [key: string]: Gear | null;
   }>(
@@ -33,7 +59,16 @@ function Customize({ classicMode }: CustomizeProps) {
     }, {} as { [key: string]: Gear | null }),
   );
 
-  const updateGearSelection = (slotName: string, gearPiece: Gear) => {
+  const resetGear = () => {
+    setGearSetup(
+      gearSlotData.reduce((acc, gearSlot) => {
+        acc[gearSlot.gearJsSlotName] = null;
+        return acc;
+      }, {} as { [key: string]: Gear | null }),
+    );
+  };
+
+  const handleGearUpdate = (slotName: string, gearPiece: Gear) => {
     setGearSetup((prev) => ({
       ...prev,
       [slotName]: gearPiece,
@@ -185,7 +220,7 @@ function Customize({ classicMode }: CustomizeProps) {
     );
   };
 
-  const updateBuffSelection = (buffId: number, toggle: boolean) => {
+  const handleBuffUpdate = (buffId: number, toggle: boolean) => {
     setBuffsSetup((prev) =>
       prev.map((buff) =>
         buff.id === buffId ? { ...buff, active: toggle } : buff,
@@ -195,9 +230,16 @@ function Customize({ classicMode }: CustomizeProps) {
 
   useEffect(() => {
     resetBuffs();
+    resetGear();
+    resetRotation();
+    resetGear();
     resetRunes();
-  }, [classicMode]);
+    resetTalentPoints();
+  }, [settingsSetup, classicMode]);
 
+  useEffect(() => {
+    console.log(rotationSetup);
+  }, [rotationSetup]);
   return (
     <Tabs className="border-none" defaultValue="gear">
       <TabsList className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 w-full rounded-none border-b">
@@ -219,7 +261,8 @@ function Customize({ classicMode }: CustomizeProps) {
       <TabsContent value="gear">
         <GearSelection
           gearSetup={gearSetup}
-          updateGearSelection={updateGearSelection}
+          handleGearUpdate={handleGearUpdate}
+          resetGear={resetGear}
         />
       </TabsContent>
       <TabsContent className="border-none" value="settings">
@@ -237,7 +280,16 @@ function Customize({ classicMode }: CustomizeProps) {
         />
       </TabsContent>
       <TabsContent className="border-none" value="rotation">
-        <Rotation />
+        <Rotation
+          classicMode={classicMode}
+          playerLevel={settingsSetup.level.slider || 60}
+          settingsSetup={settingsSetup}
+          rotationSetup={rotationSetup}
+          handleRotationUpdate={handleRotationUpdate}
+          resetRotation={resetRotation}
+          runesSetup={runesSetup}
+          gearSetup={gearSetup}
+        />
       </TabsContent>
       <TabsContent className="border-none" value="buffs">
         <Buffs
@@ -249,7 +301,7 @@ function Customize({ classicMode }: CustomizeProps) {
           settingsSetup={settingsSetup}
           buffsSetup={buffsSetup}
           resetBuffs={resetBuffs}
-          updateBuffSelection={updateBuffSelection}
+          handleBuffUpdate={handleBuffUpdate}
           runesSetup={runesSetup}
         />
       </TabsContent>

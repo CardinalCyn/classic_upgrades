@@ -21,7 +21,7 @@ function Talents({
   talentPointsRemaining,
 }: TalentsProps) {
   return (
-    <Card className="shadow-none border-none rounded-none w-full max-w-4xl">
+    <Card className="border-none rounded-none shadow-none text-2xl font-bold mb-6 text-center flex flex-col items-center">
       <CardHeader>
         <CardTitle className="text-center">Warrior Talents</CardTitle>
         <div className="flex flex-col justify-between items-center">

@@ -21,7 +21,6 @@ import BuffIcon from "./buffIcon";
 import { ClassicMode } from "../utils/types";
 import { Rune } from "../sim_lib/runes";
 import { gladiatorStanceId } from "../utils/constants";
-import { title } from "process";
 
 type BuffsProps = {
   classicMode: ClassicMode;
@@ -29,7 +28,7 @@ type BuffsProps = {
   initTargetArmor: number;
   buffsSetup: (Buff & { active: boolean })[];
   resetBuffs: () => void;
-  updateBuffSelection: (buffId: number, toggle: boolean) => void;
+  handleBuffUpdate: (buffId: number, toggle: boolean) => void;
   settingsSetup: {
     [settingsFieldName: string]: {
       checkbox?: boolean;
@@ -47,7 +46,7 @@ function Buffs({
   initTargetArmor,
   buffsSetup,
   resetBuffs,
-  updateBuffSelection,
+  handleBuffUpdate: handleBuffUpdate,
   settingsSetup,
   runesSetup,
 }: BuffsProps) {
@@ -72,7 +71,7 @@ function Buffs({
     setTargetArmor(Math.max(armor, 0));
   }, [buffsSetup, setTargetArmor]);
 
-  const BuffSections = [
+  const buffSections = [
     {
       title: "Raid Buffs",
       filter: (buff: Buff) =>
@@ -131,6 +130,19 @@ function Buffs({
     },
   ];
 
+  function runesFilter(buff: Buff): boolean {
+    if (!buff.rune) return true;
+
+    for (const prop in runesSetup) {
+      for (const val of runesSetup[prop]) {
+        if (buff.id !== val.id) continue;
+        return val.active;
+      }
+    }
+
+    return true;
+  }
+
   function levelFilter(buff: Buff): boolean {
     const minLevel = buff.minlevel;
     if (!minLevel && minLevel !== 0) return true;
@@ -156,7 +168,7 @@ function Buffs({
         </CardDescription>
       </CardHeader>
       <CardContent className="md:mx-32">
-        {BuffSections.map(({ title, filter }, index) => (
+        {buffSections.map(({ title, filter }, index) => (
           <div className="pb-10" key={title + index.toString()}>
             <h1 className="text-center">{title}</h1>
             <div
@@ -167,6 +179,7 @@ function Buffs({
                 .filter((buff) =>
                   classicMode === "Classic" ? !buff.sod : true,
                 )
+                .filter(runesFilter)
                 .filter(levelFilter)
                 .filter(aqBooksFilter)
                 .filter(filter)
@@ -178,7 +191,7 @@ function Buffs({
                     <BuffIcon
                       key={buff.id}
                       buff={foundBuff}
-                      updateBuffSelection={updateBuffSelection}
+                      handleBuffUpdate={handleBuffUpdate}
                       buffStatus={foundBuff.active}
                     />
                   ) : null;

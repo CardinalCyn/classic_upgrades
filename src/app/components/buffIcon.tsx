@@ -12,14 +12,14 @@ import { Buff } from "../sim_lib/buffs";
 
 type BuffIconProps = {
   buff: Buff;
-  updateBuffSelection: (buffId: number, toggle: boolean) => void;
+  handleBuffUpdate: (buffId: number, toggle: boolean) => void;
   buffStatus: boolean;
 };
 
-function BuffIcon({ buff, updateBuffSelection, buffStatus }: BuffIconProps) {
+function BuffIcon({ buff, handleBuffUpdate, buffStatus }: BuffIconProps) {
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    updateBuffSelection(buff.id, !buffStatus);
+    handleBuffUpdate(buff.id, !buffStatus);
   };
 
   return (
