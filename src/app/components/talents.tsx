@@ -3,16 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { warriorTalents } from "../utils/warriorTalents";
 import TalentIcon from "./talentIcon";
-
-type TalentsProps = {
-  talentsSetup: { [key: string]: number };
-  handleTalentPointUpdate: (
-    talentName: string,
-    operation: "add" | "remove",
-  ) => void;
-  resetTalentPoints: () => void;
-  talentPointsRemaining: number;
-};
+import { TalentsProps } from "../utils/types";
 
 function Talents({
   talentsSetup,

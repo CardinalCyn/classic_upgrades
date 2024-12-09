@@ -1,19 +1,9 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Rune } from "../sim_lib/runes";
 import { runeSlotData } from "../utils/constants";
 import RuneIcon from "./runeIcon";
-
-type RunesProps = {
-  runesSetup: { [key: string]: (Rune & { active: boolean })[] };
-  handleRunesUpdate: (
-    runeId: number,
-    toggle: boolean,
-    runeSlotName: string,
-  ) => void;
-  resetRunes: () => void;
-};
+import { RunesProps } from "../utils/types";
 
 function Runes({ runesSetup, handleRunesUpdate, resetRunes }: RunesProps) {
   return (

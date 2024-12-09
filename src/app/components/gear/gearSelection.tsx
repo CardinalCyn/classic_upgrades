@@ -2,13 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { gearSlotData } from "../../utils/constants";
 import { GearSlot } from "./gearSlot";
-import { Gear } from "@/app/sim_lib/gear";
-
-type GearSelectionProps = {
-  gearSetup: { [key: string]: Gear | null };
-  handleGearUpdate: (slotName: string, gearPiece: Gear) => void;
-  resetGear: () => void;
-};
+import { GearSelectionProps } from "@/app/utils/types";
 
 export default function GearSelection({
   gearSetup,

@@ -1,3 +1,7 @@
+import { Buff } from "../sim_lib/buffs";
+import { Gear } from "../sim_lib/gear";
+import { Rune } from "../sim_lib/runes";
+import { Spell } from "../sim_lib/spells";
 import { equipmentStats, races } from "./constants";
 
 export type GearStat = {
@@ -50,3 +54,85 @@ export type SettingsField =
   | DropdownSettingField;
 
 export type Race = (typeof races)[number];
+
+export type GearSelectionProps = {
+  gearSetup: { [key: string]: Gear | null };
+  handleGearUpdate: (slotName: string, gearPiece: Gear) => void;
+  resetGear: () => void;
+};
+
+export type SettingsProps = {
+  settingsSetup: {
+    [key: string]: {
+      checkbox?: boolean;
+      number?: number;
+      slider?: number;
+      dropdown?: string;
+    };
+  };
+  handleSettingsUpdate: (
+    settingName: string,
+    val: {
+      checkbox?: boolean;
+      number?: number;
+      slider?: number;
+      dropdown?: string;
+    },
+  ) => void;
+};
+
+export type TalentsProps = {
+  talentsSetup: { [key: string]: number };
+  handleTalentPointUpdate: (
+    talentName: string,
+    operation: "add" | "remove",
+  ) => void;
+  resetTalentPoints: () => void;
+  talentPointsRemaining: number;
+};
+
+export type RotationProps = {
+  classicMode: ClassicMode;
+  playerLevel: number;
+  settingsSetup: {
+    [settingsFieldName: string]: {
+      checkbox?: boolean;
+      number?: number;
+      slider?: number;
+      dropdown?: string;
+    };
+  };
+  rotationSetup: Spell[];
+  handleRotationUpdate: (spellId: number, updates: Partial<Spell>) => void;
+  resetRotation: () => void;
+  runesSetup: { [key: string]: (Rune & { active: boolean })[] };
+  gearSetup: { [key: string]: Gear | null };
+};
+
+export type BuffsProps = {
+  classicMode: ClassicMode;
+  playerLevel: number;
+  initTargetArmor: number;
+  buffsSetup: (Buff & { active: boolean })[];
+  resetBuffs: () => void;
+  handleBuffUpdate: (buffId: number, toggle: boolean) => void;
+  settingsSetup: {
+    [settingsFieldName: string]: {
+      checkbox?: boolean;
+      number?: number;
+      slider?: number;
+      dropdown?: string;
+    };
+  };
+  runesSetup: { [key: string]: (Rune & { active: boolean })[] };
+};
+
+export type RunesProps = {
+  runesSetup: { [key: string]: (Rune & { active: boolean })[] };
+  handleRunesUpdate: (
+    runeId: number,
+    toggle: boolean,
+    runeSlotName: string,
+  ) => void;
+  resetRunes: () => void;
+};

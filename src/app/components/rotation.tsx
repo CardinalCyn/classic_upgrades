@@ -3,28 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { Button } from "@/components/ui/button";
 import { Spell } from "../sim_lib/spells";
-import { ClassicMode } from "../utils/types";
+import { RotationProps } from "../utils/types";
 import RotationIcon from "./rotationIcon";
-import { Rune } from "../sim_lib/runes";
-import { Gear } from "../sim_lib/gear";
-
-type RotationProps = {
-  classicMode: ClassicMode;
-  playerLevel: number;
-  settingsSetup: {
-    [settingsFieldName: string]: {
-      checkbox?: boolean;
-      number?: number;
-      slider?: number;
-      dropdown?: string;
-    };
-  };
-  rotationSetup: Spell[];
-  handleRotationUpdate: (spellId: number, toggle: boolean) => void;
-  resetRotation: () => void;
-  runesSetup: { [key: string]: (Rune & { active: boolean })[] };
-  gearSetup: { [key: string]: Gear | null };
-};
 
 function Rotation({
   rotationSetup,

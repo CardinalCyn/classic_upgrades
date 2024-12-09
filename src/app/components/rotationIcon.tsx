@@ -229,10 +229,7 @@ function RotationIcon({
             className="w-20"
           />
         )}
-
         <Label htmlFor={`${spell.id}-${prop.key}`}>{prop.label}</Label>
-
-        {/* Always render subInput, but disable when checkbox is not checked */}
         {prop.subInput && subInputKey && (
           <div className="flex items-center space-x-2">
             <Input

@@ -18,27 +18,8 @@ import {
   sebaciousId,
 } from "../sim_lib/buffs";
 import BuffIcon from "./buffIcon";
-import { ClassicMode } from "../utils/types";
-import { Rune } from "../sim_lib/runes";
+import { BuffsProps } from "../utils/types";
 import { gladiatorStanceId } from "../utils/constants";
-
-type BuffsProps = {
-  classicMode: ClassicMode;
-  playerLevel: number;
-  initTargetArmor: number;
-  buffsSetup: (Buff & { active: boolean })[];
-  resetBuffs: () => void;
-  handleBuffUpdate: (buffId: number, toggle: boolean) => void;
-  settingsSetup: {
-    [settingsFieldName: string]: {
-      checkbox?: boolean;
-      number?: number;
-      slider?: number;
-      dropdown?: string;
-    };
-  };
-  runesSetup: { [key: string]: (Rune & { active: boolean })[] };
-};
 
 function Buffs({
   classicMode,

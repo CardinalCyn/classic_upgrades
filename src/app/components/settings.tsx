@@ -11,29 +11,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { settingsFields } from "../utils/constants";
-import { SettingsField } from "../utils/types";
+import { SettingsField, SettingsProps } from "../utils/types";
 import CustomDropdown from "./ui/custom-dropdown";
 import CustomSlider from "./ui/custom-slider";
-
-type SettingsProps = {
-  settingsSetup: {
-    [key: string]: {
-      checkbox?: boolean;
-      number?: number;
-      slider?: number;
-      dropdown?: string;
-    };
-  };
-  handleSettingsUpdate: (
-    settingName: string,
-    val: {
-      checkbox?: boolean;
-      number?: number;
-      slider?: number;
-      dropdown?: string;
-    },
-  ) => void;
-};
 
 function Settings({ settingsSetup, handleSettingsUpdate }: SettingsProps) {
   function renderField(settingsField: SettingsField): React.JSX.Element {

@@ -1,9 +1,5 @@
-import { gear } from "../gear";
-import { runes } from "../runes";
-import { Race, Spell } from "../../utils/types";
+import { Race } from "../../utils/types";
 import { levelstats } from "../levelstats";
-import { talents } from "../talents";
-import { spells } from "../spells";
 
 type Target = {
   level: number;
