@@ -26,12 +26,10 @@ function Settings({ settingsSetup, handleSettingsUpdate }: SettingsProps) {
             <Input
               id={settingsField.id}
               type="number"
-              value={currentValue.number}
+              value={currentValue as number}
               placeholder={settingsField.defaultValue.toString()}
               onChange={(e) =>
-                handleSettingsUpdate(settingsField.id, {
-                  number: Number(e.target.value),
-                })
+                handleSettingsUpdate(settingsField.id, Number(e.target.value))
               }
             />
           </div>
@@ -42,7 +40,7 @@ function Settings({ settingsSetup, handleSettingsUpdate }: SettingsProps) {
             <Label htmlFor={settingsField.label}>{settingsField.label}</Label>
             <CustomSlider
               settingsField={settingsField}
-              currentValue={currentValue.slider}
+              currentValue={currentValue as number}
               handleSettingsUpdate={handleSettingsUpdate}
             />
           </div>
@@ -53,11 +51,9 @@ function Settings({ settingsSetup, handleSettingsUpdate }: SettingsProps) {
             <Label htmlFor={settingsField.label}>{settingsField.label}</Label>
             <Checkbox
               id={settingsField.id}
-              checked={currentValue.checkbox || false}
+              checked={(currentValue as boolean) || false}
               onCheckedChange={(checked) =>
-                handleSettingsUpdate(settingsField.id, {
-                  checkbox: !!checked, // Convert to boolean
-                })
+                handleSettingsUpdate(settingsField.id, !!checked)
               }
             />
           </div>
@@ -68,7 +64,7 @@ function Settings({ settingsSetup, handleSettingsUpdate }: SettingsProps) {
             <Label htmlFor={settingsField.label}>{settingsField.label}</Label>
             <CustomDropdown
               settingsField={settingsField}
-              currentValue={currentValue.dropdown}
+              currentValue={currentValue as string}
               handleSettingsUpdate={handleSettingsUpdate}
             />
           </div>

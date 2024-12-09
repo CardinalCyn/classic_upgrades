@@ -78,7 +78,7 @@ function Customize({
       <TabsContent className="border-none" value="rotation">
         <Rotation
           classicMode={classicMode}
-          playerLevel={rotationProps.settingsSetup.level.slider || 60}
+          playerLevel={(rotationProps.settingsSetup.level as number) || 60}
           settingsSetup={rotationProps.settingsSetup}
           rotationSetup={rotationProps.rotationSetup}
           handleRotationUpdate={rotationProps.handleRotationUpdate}
@@ -90,9 +90,9 @@ function Customize({
       <TabsContent className="border-none" value="buffs">
         <Buffs
           classicMode={classicMode}
-          playerLevel={settingsProps.settingsSetup.level.slider || 60}
+          playerLevel={(settingsProps.settingsSetup.level as number) || 60}
           initTargetArmor={
-            settingsProps.settingsSetup.targetbasearmor.number ||
+            (settingsProps.settingsSetup.targetbasearmor as number) ||
             defaultTargetBaseArmor
           }
           settingsSetup={settingsProps.settingsSetup}

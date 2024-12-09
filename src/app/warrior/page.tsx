@@ -3,7 +3,12 @@
 import React, { useContext, useState, useEffect } from "react";
 import GearStats from "../components/gear/gearStats";
 import Customize from "../components/customize";
-import { defaultTargetBaseArmor, equipmentStats } from "../utils/constants";
+import {
+  defaultTargetBaseArmor,
+  equipmentStats,
+  getPlayerConfig,
+  getTargetConfig,
+} from "../utils/constants";
 import Navbar from "../components/navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,14 +20,12 @@ import { Gear } from "../sim_lib/gear";
 import { Rune, runes } from "../sim_lib/runes";
 import { warriorTalents } from "../utils/warriorTalents";
 import { gearSlotData, runeSlotData } from "../utils/constants";
+import { Player } from "../sim_lib/classes/player";
+import { GetConfig } from "../utils/types";
 
 function Warrior(): React.JSX.Element {
   const [simulatedDPS, setSimulatedDPS] = useState(0);
   const { classicMode, setClassicMode } = useContext(ClassicModeContext);
-
-  function simulateDps() {
-    setSimulatedDPS(Math.random());
-  }
 
   const [rotationSetup, setRotationSetup] = useState<Spell[]>(
     spells.map((spell) => {
@@ -159,42 +162,23 @@ function Warrior(): React.JSX.Element {
   };
 
   const [settingsSetup, setSettingsSetup] = useState<{
-    [settingsFieldName: string]: {
-      checkbox?: boolean;
-      number?: number;
-      slider?: number;
-      dropdown?: string;
-    };
+    [settingsFieldName: string]: boolean | number | string;
   }>(
     settingsFields.reduce((acc, settingsField) => {
       switch (settingsField.fieldType) {
-        case "checkbox":
-          acc[settingsField.id] = { checkbox: settingsField.defaultValue };
-          break;
-        case "number":
-          acc[settingsField.id] = { number: settingsField.defaultValue };
-          break;
-        case "slider":
-          acc[settingsField.id] = { slider: settingsField.defaultValue };
-          break;
         case "dropdown":
-          acc[settingsField.id] = {
-            dropdown: settingsField.defaultDropdownValue,
-          };
+          acc[settingsField.id] = settingsField.defaultDropdownValue;
           break;
+        default:
+          acc[settingsField.id] = settingsField.defaultValue;
       }
       return acc;
-    }, {} as { [key: string]: { checkbox?: boolean; number?: number; slider?: number; dropdown?: string } }),
+    }, {} as { [key: string]: boolean | number | string }),
   );
 
   const handleSettingsUpdate = (
     settingName: string,
-    val: {
-      checkbox?: boolean;
-      number?: number;
-      slider?: number;
-      dropdown?: string;
-    },
+    val: boolean | string | number,
   ) => {
     setSettingsSetup((prev) => {
       if (settingName === "level") resetBuffs();
@@ -236,6 +220,23 @@ function Warrior(): React.JSX.Element {
     resetTalentPoints();
   }, [settingsSetup, classicMode]);
 
+  function simulateDps() {
+    const playerConfig = getPlayerConfig(settingsSetup);
+
+    const targetConfig = getTargetConfig(settingsSetup);
+
+    const config: GetConfig = {
+      mode: classicMode === "Classic" ? "classic" : "sod",
+      playerConfig,
+      targetConfig,
+      talents: talentsSetup,
+      gear: gearSetup,
+    };
+    const player = new Player(config, undefined, undefined, undefined);
+    console.log("player: ");
+    console.log(player);
+  }
+
   return (
     <div className="h-screen">
       <Navbar classicMode={classicMode} setClassicMode={setClassicMode} />
@@ -272,8 +273,9 @@ function Warrior(): React.JSX.Element {
               resetBuffs,
               classicMode,
               initTargetArmor:
-                settingsSetup.targetbasearmor.number || defaultTargetBaseArmor,
-              playerLevel: settingsSetup.level.slider || 60,
+                (settingsSetup.targetbasearmor as number) ||
+                defaultTargetBaseArmor,
+              playerLevel: (settingsSetup.level as number) || 60,
               runesSetup,
               settingsSetup,
             }}
@@ -281,7 +283,7 @@ function Warrior(): React.JSX.Element {
               classicMode,
               gearSetup,
               handleRotationUpdate,
-              playerLevel: settingsSetup.level.slider || 60,
+              playerLevel: (settingsSetup.level as number) || 60,
               resetRotation,
               rotationSetup,
               runesSetup,

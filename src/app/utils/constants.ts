@@ -1,5 +1,16 @@
 import { RuneSlot } from "../sim_lib/runes";
-import { ClassicMode, GearSlotData, SettingsField } from "./types";
+import {
+  CheckboxSettingField,
+  ClassicMode,
+  DropdownSettingField,
+  GearSlotData,
+  NumberSettingField,
+  PlayerConfig,
+  Race,
+  SettingsField,
+  SliderSettingField,
+  TargetConfig,
+} from "./types";
 
 export const gearSlotData: GearSlotData[] = [
   { slotName: "Head", imageName: "Head.jpg", gearJsSlotName: "head" },
@@ -283,10 +294,10 @@ export const settingsFields: SettingsField[] = [
     id: "bleedreduction",
     label: "Bleed Reduction",
     fieldType: "dropdown",
-    defaultDropdownValue: "None",
+    defaultDropdownValue: "0",
     dropdownValues: [
       { dropdownLabel: "None", dropdownValue: "1" },
-      { dropdownLabel: "20%", dropdownValue: ".8" },
+      { dropdownLabel: "20%", dropdownValue: "0.8" },
       { dropdownLabel: "100%", dropdownValue: "0" },
     ],
   },
@@ -329,3 +340,174 @@ export const invalidBattleSquawkIds = [9923060, 9823060, 9723060, 9623060];
 export const validBattleSquawkId = 23060;
 
 export const gladiatorStanceId = 413479;
+
+export const getPlayerConfig = (settingsSetup: {
+  [settingsFieldName: string]: string | number | boolean;
+}): PlayerConfig => {
+  return {
+    adjacent:
+      settingsSetup.adjacent ||
+      (settingsFields.find((field) => field.id === "adjacent") &&
+        "defaultValue" in
+          settingsFields.find((field) => field.id === "adjacent")!)
+        ? (
+            settingsFields.find(
+              (field) => field.id === "adjacent",
+            )! as SliderSettingField
+          ).defaultValue
+        : 0,
+    aqbooks:
+      settingsSetup.aqbooks ||
+      (settingsFields.find((field) => field.id === "aqbooks") &&
+        "defaultValue" in
+          settingsFields.find((field) => field.id === "aqbooks")!)
+        ? (
+            settingsFields.find(
+              (field) => field.id === "aqbooks",
+            )! as CheckboxSettingField
+          ).defaultValue
+        : false,
+    level:
+      settingsSetup.level ||
+      (settingsFields.find((field) => field.id === "level") &&
+        "defaultValue" in settingsFields.find((field) => field.id === "level")!)
+        ? (
+            settingsFields.find(
+              (field) => field.id === "level",
+            )! as SliderSettingField
+          ).defaultValue
+        : 60,
+    race:
+      settingsSetup.race ||
+      (settingsFields.find((field) => field.id === "race") &&
+        "defaultDropdownValue" in
+          settingsFields.find((field) => field.id === "race")!)
+        ? ((
+            settingsFields.find(
+              (field) => field.id === "race",
+            )! as DropdownSettingField
+          ).defaultDropdownValue as Race)
+        : "Human",
+    reactionmax:
+      settingsSetup.reactionmax ||
+      (settingsFields.find((field) => field.id === "reactionmax") &&
+        "defaultValue" in
+          settingsFields.find((field) => field.id === "reactionmax")!)
+        ? (
+            settingsFields.find(
+              (field) => field.id === "reactionmax",
+            )! as NumberSettingField
+          ).defaultValue
+        : 60,
+    reactionmin:
+      settingsSetup.reactionmin ||
+      (settingsFields.find((field) => field.id === "reactionmin") &&
+        "defaultValue" in
+          settingsFields.find((field) => field.id === "reactionmin")!)
+        ? (
+            settingsFields.find(
+              (field) => field.id === "reactionmin",
+            )! as NumberSettingField
+          ).defaultValue
+        : 60,
+    spellqueueing:
+      settingsSetup.spellqueueing ||
+      (settingsFields.find((field) => field.id === "spellqueueing") &&
+        "defaultValue" in
+          settingsFields.find((field) => field.id === "spellqueueing")!)
+        ? (
+            settingsFields.find(
+              (field) => field.id === "spellqueueing",
+            )! as CheckboxSettingField
+          ).defaultValue
+        : false,
+  };
+};
+
+export const getTargetConfig = (settingsSetup: {
+  [settingsFieldName: string]: string | number | boolean;
+}): TargetConfig => {
+  const targetLevel =
+    settingsSetup.targetlevel ||
+    (settingsFields.find((field) => field.id === "targetlevel") &&
+      "defaultValue" in
+        settingsFields.find((field) => field.id === "targetlevel")!)
+      ? (
+          settingsFields.find(
+            (field) => field.id === "targetlevel",
+          )! as NumberSettingField
+        ).defaultValue
+      : 63;
+  return {
+    basearmor:
+      settingsSetup.targetbasearmor ||
+      (settingsFields.find((field) => field.id === "targetbasearmor") &&
+        "defaultValue" in
+          settingsFields.find((field) => field.id === "targetbasearmor")!)
+        ? (
+            settingsFields.find(
+              (field) => field.id === "targetbasearmor",
+            )! as NumberSettingField
+          ).defaultValue
+        : defaultTargetBaseArmor,
+    bleedreduction:
+      Number(settingsSetup.bleedreduction) ||
+      (settingsFields.find((field) => field.id === "bleedreduction") &&
+        "defaultDropdownValue" in
+          settingsFields.find((field) => field.id === "bleedreduction")!)
+        ? Number(
+            (
+              settingsFields.find(
+                (field) => field.id === "bleedreduction",
+              )! as DropdownSettingField
+            ).defaultDropdownValue,
+          )
+        : Number("0"),
+    defense: targetLevel * 5,
+    maxdmg:
+      settingsSetup.targetmaxdmg ||
+      (settingsFields.find((field) => field.id === "targetmaxdmg") &&
+        "defaultValue" in
+          settingsFields.find((field) => field.id === "targetmaxdmg")!)
+        ? (
+            settingsFields.find(
+              (field) => field.id === "targetmaxdmg",
+            )! as NumberSettingField
+          ).defaultValue
+        : 300,
+    mindmg:
+      settingsSetup.targetmindmg ||
+      (settingsFields.find((field) => field.id === "targetmindmg") &&
+        "defaultValue" in
+          settingsFields.find((field) => field.id === "targetmindmg")!)
+        ? (
+            settingsFields.find(
+              (field) => field.id === "targetmindmg",
+            )! as NumberSettingField
+          ).defaultValue
+        : 200,
+    level: targetLevel,
+    resistance:
+      settingsSetup.targetresistance ||
+      (settingsFields.find((field) => field.id === "targetresistance") &&
+        "defaultValue" in
+          settingsFields.find((field) => field.id === "targetresistance")!)
+        ? (
+            settingsFields.find(
+              (field) => field.id === "targetresistance",
+            )! as NumberSettingField
+          ).defaultValue
+        : 24,
+    speed:
+      settingsSetup.targetspeed ||
+      (settingsFields.find((field) => field.id === "targetspeed") &&
+        "defaultValue" in
+          settingsFields.find((field) => field.id === "targetspeed")!)
+        ? (
+            settingsFields.find(
+              (field) => field.id === "targetspeed",
+            )! as NumberSettingField
+          ).defaultValue
+        : 24,
+  };
+};

@@ -1,33 +1,8 @@
-import { Race } from "../../utils/types";
+import { GetConfig, Race, TargetConfig } from "@/app/utils/types";
 import { levelstats } from "../levelstats";
-
-type Target = {
-  level: number;
-  basearmor: number;
-  defense: number;
-  resistance: number;
-  speed: number;
-  mindmg: number;
-  maxdmg: number;
-  bleedreduction: number;
-  misschance: number;
-  mitigation: number;
-  binaryresist: number;
-  dodge: number;
-};
-type GetConfig = {
-  level: number;
-  race: Race;
-  aqbooks: boolean;
-  reactionmin: number;
-  reactionmax: number;
-  adjacent: number;
-  mode: "classic" | "sod";
-  spellqueueing: boolean;
-  target: Target;
-  talents: { [talentName: string]: number };
-  basestance: string;
-};
+import { Gear } from "../gear";
+import { enchant, sets } from "../enchants";
+import { Weapon } from "./weapon";
 
 type Base = {
   ap: number;
@@ -74,20 +49,28 @@ type Resist = {
   frost: number;
 };
 
+type PlayerGetConfig = {
+  level: number;
+  race: Race;
+  aqbooks: boolean;
+  reactionmin: number;
+  reactionmax: number;
+  adjacent: number;
+  mode: "classic" | "sod";
+  spellqueueing: boolean;
+  target: TargetConfig;
+  talents: { [talentName: string]: number };
+  gear: { [key: string]: Gear | null };
+};
+
 export class Player {
-  static getConfig(props: GetConfig): GetConfig {
+  static getConfig(props: GetConfig): PlayerGetConfig {
     return {
-      level: props.level,
-      race: props.race,
-      aqbooks: props.aqbooks,
-      reactionmin: props.reactionmin,
-      reactionmax: props.reactionmax,
-      adjacent: props.adjacent,
+      ...props.playerConfig,
       mode: props.mode,
-      spellqueueing: props.spellqueueing,
+      target: { ...props.targetConfig },
       talents: props.talents,
-      target: props.target,
-      basestance: props.basestance,
+      gear: props.gear,
     };
   }
   rage: number;
@@ -116,7 +99,7 @@ export class Player {
   reactionmax: number;
   adjacent: number;
   spelldamage: number;
-  target: Target;
+  target: TargetConfig;
   mode: "sod" | "classic";
   bleedmod: number;
   spellqueueing: boolean;
@@ -132,16 +115,17 @@ export class Player {
   stats: { [key: string]: any };
   auras: { [key: string]: any };
   basestance: string;
-
-  //idk if testitem testtype enchtype undefined types
+  config: PlayerGetConfig;
   constructor(
-    testItem: number | undefined,
+    conf: GetConfig,
+    testItem: undefined,
     testType: undefined,
     enchtype: undefined,
-    config: GetConfig,
   ) {
-    if (!config) config = Player.getConfig(config);
-    this.talents = config.talents;
+    const config = Player.getConfig(conf);
+    this.config = config;
+    const talents = config.talents;
+    const gear = config.gear;
     this.rage = 0;
     this.ragemod = 1;
     this.level = config.level;
@@ -166,8 +150,7 @@ export class Player {
     this.nextswingcl = false;
     this.freeslam = false;
     this.ragecostbonus = 0;
-    //FIXME: set to take in from params?
-    this.logging = false;
+    this.logging = config.logging;
     this.race = config.race;
     this.aqbooks = config.aqbooks;
     this.reactionmin = config.reactionmin;
@@ -176,7 +159,7 @@ export class Player {
     this.spelldamage = 0;
     this.target = config.target;
     this.mode = config.mode;
-    this.bleedmod = parseFloat(this.target.bleedreduction.toString());
+    this.bleedmod = parseFloat(this.target.bleedreduction);
     this.spellqueueing = config.spellqueueing;
     this.target.misschance = this.getTargetSpellMiss();
     this.target.mitigation = this.getTargetSpellMitigation();
@@ -224,44 +207,36 @@ export class Player {
       block: 0,
       defense: 0,
     };
-    this.basestance = config.basestance;
-    this.precisetiming = false;
-    this.spells = {};
-    //FIXME: not using test
-    // if(testItem && testType){
-    //   if (enchtype == 1) {
-    //     this.testEnch = testItem;
-    //     this.testEnchType = testType;
-    //   } else if (enchtype == 2) {
-    //     this.testTempEnch = testItem;
-    //     this.testTempEnchType = testType;
-    //   } else if (enchtype == 3 &&) {
-    //     if (testType == 0) {
-    //       this.base.ap += testItem;
-    //     } else if (testType == 1) {
-    //       this.base.crit += testItem;
-    //     } else if (testType == 2) {
-    //       this.base.hit += testItem;
-    //     } else if (testType == 3) {
-    //       this.base.str += testItem;
-    //     } else if (testType == 4) {
-    //       this.base.agi += testItem;
-    //     }
-    //   } else {
-    //     this.testItem = testItem;
-    //     this.testItemType = testType;
-    //   }
-    // }
-
-    this.preporder = [];
+    if (enchtype == 1) {
+      this.testEnch = testItem;
+      this.testEnchType = testType;
+    } else if (enchtype == 2) {
+      this.testTempEnch = testItem;
+      this.testTempEnchType = testType;
+    } else if (enchtype == 3) {
+      if (testType == 0) {
+        this.base.ap += testItem;
+      } else if (testType == 1) {
+        this.base.crit += testItem;
+      } else if (testType == 2) {
+        this.base.hit += testItem;
+      } else if (testType == 3) {
+        this.base.str += testItem;
+      } else if (testType == 4) {
+        this.base.agi += testItem;
+      }
+    } else {
+      this.testItem = testItem;
+      this.testItemType = testType;
+    }
     this.stats = {};
     this.auras = {};
+    this.spells = {};
     this.items = [];
     this.addRace();
-    // this.addTalents();
-    this.mh = null;
-    this.oh = null;
-    this.addGear();
+    this.talents = talents;
+    // this.addTalents(talents);
+    this.addGear(gear);
     if (!this.mh) return;
     this.addSets();
     this.addEnchants();
@@ -272,12 +247,10 @@ export class Player {
     this.sortSpells();
     this.addRunes();
     this.setSkills();
-    if (this.talents.flurry) this.auras.flurry = new Flurry(this, undefined);
+    if (this.talents.flurry) this.auras.flurry = new Flurry(this);
     if (this.talents.deepwounds && this.mode !== "classic")
       this.auras.deepwounds =
-        this.mode == "sod"
-          ? new DeepWounds(this, null, undefined)
-          : new OldDeepWounds(this, null, undefined);
+        this.mode == "sod" ? new DeepWounds(this) : new OldDeepWounds(this);
     if (this.adjacent && this.talents.deepwounds && this.mode !== "classic") {
       for (let i = 2; i <= this.adjacent + 1; i++)
         this.auras["deepwounds" + i] =
@@ -286,13 +259,12 @@ export class Player {
             : new OldDeepWounds(this, null, i);
     }
 
-    this.spells.stanceswitch = new StanceSwitch(this, null);
-    if (this.spells.bloodrage)
-      this.auras.bloodrage = new BloodrageAura(this, null);
+    this.spells.stanceswitch = new StanceSwitch(this);
+    if (this.spells.bloodrage) this.auras.bloodrage = new BloodrageAura(this);
     if (this.spells.berserkerrage)
-      this.auras.berserkerrage = new BerserkerRageAura(this, null);
+      this.auras.berserkerrage = new BerserkerRageAura(this);
     if (this.spells.shieldslam)
-      this.auras.defendersresolve = new DefendersResolve(this, null);
+      this.auras.defendersresolve = new DefendersResolve(this);
 
     if (
       (this.basestance == "def" || this.basestance == "glad") &&
@@ -305,8 +277,8 @@ export class Player {
     }
 
     if (this.items.includes(233490)) {
-      this.auras.obsidianstrength = new ObsidianStrength(this, null);
-      this.auras.obsidianhaste = new ObsidianHaste(this, null);
+      this.auras.obsidianstrength = new ObsidianStrength(this);
+      this.auras.obsidianhaste = new ObsidianHaste(this);
     }
 
     this.update();
@@ -346,7 +318,7 @@ export class Player {
 
       // race,class,level,str,agi,sta,inte,spi
       let stats = l.split(",");
-      if (stats[0] == raceid && stats[2] === this.level.toString()) {
+      if (stats[0] == raceid && stats[2] == this.level) {
         this.base.aprace = this.level * 3 - 20;
         this.base.ap += this.level * 3 - 20;
         this.base.str += parseInt(stats[3]);
@@ -358,113 +330,105 @@ export class Player {
       }
     }
   }
-  // addTalents() {
-  //   this.talents = {};
-  //   for (let tree in talents) {
-  //     for (let talent of talents[tree].t) {
-  //       this.talents = Object.assign(this.talents, talent.aura(talent.c));
-  //     }
-  //   }
-  //   if (this.talents.defense) this.base.defense += this.talents.defense;
-  // }
-  addGear() {
+  addTalents(talents: { [talentName: string]: number }) {
+    this.talents = {};
+    for (let tree in talents) {
+      for (let talent of talents[tree].t) {
+        this.talents = Object.assign(this.talents, talent.aura(talent.c));
+      }
+    }
+    if (this.talents.defense) this.base.defense += this.talents.defense;
+  }
+  addGear(gear: { [key: string]: Gear | null }) {
     for (let type in gear) {
-      const key = type as keyof typeof gear;
-      for (let item of gear[key]) {
-        if (
-          (this.testItemType == type && this.testItem == item.id) ||
-          (this.testItemType != type && item.selected)
-        ) {
-          for (let prop in this.base) {
-            if (prop == "haste" && "haste" in item) {
-              this.base.haste *= 1 + Number(item.haste) / 100 || 1;
-            } else {
-              if (typeof item[prop as keyof typeof item] === "object") {
-                for (let subprop in item[prop]) {
-                  this.base[prop][subprop] += item[prop][subprop] || 0;
-                }
-              } else {
-                if (item[prop as keyof typeof item]) {
-                  this.base[prop as keyof typeof this.base] +=
-                    item[prop as keyof typeof item] || 0;
-                }
-              }
+      if (!gear[type]) continue;
+      const item = gear[type];
+      for (let prop in this.base) {
+        if (prop == "haste") {
+          this.base.haste *= 1 + item.haste / 100 || 1;
+        } else {
+          if (typeof item[prop] === "object") {
+            for (let subprop in item[prop]) {
+              this.base[prop][subprop] += item[prop][subprop] || 0;
+            }
+          } else {
+            if (item[prop]) {
+              this.base[prop] += item[prop] || 0;
             }
           }
-          if (item.skill && item.skill > 0) {
-            let sk: number =
-              WEAPONTYPE[item.type.replace(" ", "").toUpperCase()];
-            this.base["skill_" + sk] += item.skill;
-          }
-          if (item.skills) {
-            Object.keys(item.skills).forEach((key) => {
-              this.base["skill_" + key] += item.skills[key];
-            });
-          }
-
-          if (item.d) this.base.defense += item.d;
-
-          if (type == "mainhand" || type == "offhand" || type == "twohand")
-            this.addWeapon(item, type);
-
-          if (
-            item.proc &&
-            item.proc.chance &&
-            (type == "trinket1" || type == "trinket2")
-          ) {
-            let proc = {};
-            proc.chance = item.proc.chance * 100;
-            proc.extra = item.proc.extra;
-            proc.magicdmg = item.proc.dmg;
-            proc.cooldown = item.proc.cooldown;
-            if (item.spell) {
-              this.auras[item.proc.spell.toLowerCase()] = eval(
-                "new " + item.proc.spell + "(this)",
-              );
-              proc.spell = this.auras[item.proc.spell.toLowerCase()];
-            }
-            this["trinketproc" + (this.trinketproc1 ? 2 : 1)] = proc;
-          } else if (item.proc && item.proc.chance) {
-            let proc = {};
-            proc.chance = item.proc.chance * 100;
-            if (item.proc.dmg) proc.magicdmg = item.proc.dmg;
-            if (item.proc.spell) {
-              this.auras[item.proc.spell.toLowerCase()] = eval(
-                "new " + item.proc.spell + "(this)",
-              );
-              proc.spell = this.auras[item.proc.spell.toLowerCase()];
-            }
-            if (this.attackproc2)
-              console.log("Warning! overlapping attack procs!");
-            if (!this.attackproc1) this.attackproc1 = proc;
-            else this.attackproc2 = proc;
-          }
-
-          if (item.id == 21189) this.base["moddmgdone"] += 4;
-          if (item.id == 19968) this.base["moddmgdone"] += 2;
-          if (item.id == 215166) this.base["moddmgdone"] += 3;
-          if (item.id == 228089) this.base["moddmgdone"] += 4;
-          if (item.id == 227809) this.base["moddmgdone"] += 3;
-          if (item.id == 230003 || item.id == 23000399)
-            this.base["moddmgdone"] += 4;
-          if (item.id == 233638) this.base["moddmgdone"] += 3;
-          if (item.id == 234761) this.base["moddmgdone"] += 4;
-          if (item.id == 234084) this.base["moddmgdone"] += 3;
-          if (item.id == 234065) this.base["moddmgdone"] += 2;
-          if (item.id == 234147) this.base["moddmgdone"] += 4;
-
-          if (item.id == 228122)
-            this.spells.themoltencore = new TheMoltenCore(this);
-
-          if (item.tw) this.timeworn++;
-
-          this.items.push(item.id);
         }
       }
+      if (item.skill && item.skill > 0) {
+        let sk = WEAPONTYPE[item.type.replace(" ", "").toUpperCase()];
+        this.base["skill_" + sk] += item.skill;
+      }
+      if (item.skills) {
+        Object.keys(item.skills).forEach((key) => {
+          this.base["skill_" + key] += item.skills[key];
+        });
+      }
+
+      if (item.d) this.base.defense += item.d;
+
+      if (type == "mainhand" || type == "offhand" || type == "twohand")
+        this.addWeapon(item, type);
+
+      if (
+        item.proc &&
+        item.proc.chance &&
+        (type == "trinket1" || type == "trinket2")
+      ) {
+        let proc = {};
+        proc.chance = item.proc.chance * 100;
+        proc.extra = item.proc.extra;
+        proc.magicdmg = item.proc.dmg;
+        proc.cooldown = item.proc.cooldown;
+        if (item.spell) {
+          this.auras[item.proc.spell.toLowerCase()] = eval(
+            "new " + item.proc.spell + "(this)",
+          );
+          proc.spell = this.auras[item.proc.spell.toLowerCase()];
+        }
+        this["trinketproc" + (this.trinketproc1 ? 2 : 1)] = proc;
+      } else if (item.proc && item.proc.chance) {
+        let proc = {};
+        proc.chance = item.proc.chance * 100;
+        if (item.proc.dmg) proc.magicdmg = item.proc.dmg;
+        if (item.proc.spell) {
+          this.auras[item.proc.spell.toLowerCase()] = eval(
+            "new " + item.proc.spell + "(this)",
+          );
+          proc.spell = this.auras[item.proc.spell.toLowerCase()];
+        }
+        if (this.attackproc2) console.log("Warning! overlapping attack procs!");
+        if (!this.attackproc1) this.attackproc1 = proc;
+        else this.attackproc2 = proc;
+      }
+
+      if (item.id == 21189) this.base["moddmgdone"] += 4;
+      if (item.id == 19968) this.base["moddmgdone"] += 2;
+      if (item.id == 215166) this.base["moddmgdone"] += 3;
+      if (item.id == 228089) this.base["moddmgdone"] += 4;
+      if (item.id == 227809) this.base["moddmgdone"] += 3;
+      if (item.id == 230003 || item.id == 23000399)
+        this.base["moddmgdone"] += 4;
+      if (item.id == 233638) this.base["moddmgdone"] += 3;
+      if (item.id == 234761) this.base["moddmgdone"] += 4;
+      if (item.id == 234084) this.base["moddmgdone"] += 3;
+      if (item.id == 234065) this.base["moddmgdone"] += 2;
+      if (item.id == 234147) this.base["moddmgdone"] += 4;
+
+      if (item.id == 228122)
+        this.spells.themoltencore = new TheMoltenCore(this);
+
+      if (item.tw) this.timeworn++;
+
+      this.items.push(item.id);
     }
   }
   addWeapon(item, type) {
     let ench, tempench;
+    //FIXME: replace later
     for (let item of enchant[type]) {
       if (item.temp) continue;
       if (this.testEnchType == type && this.testEnch == item.id) ench = item;
@@ -547,12 +511,12 @@ export class Player {
   preAddRunes() {
     if (typeof runes === "undefined") return;
     for (let type in runes) {
-      for (let item of runes[type as keyof typeof runes]) {
-        if ("selected" in item && item.selected) {
-          if ("focusedrage" in item && item.focusedrage) {
+      for (let item of runes[type]) {
+        if (item.selected) {
+          if (item.focusedrage) {
             this.ragecostbonus = 3;
           }
-          if ("precisetiming" in item && item.precisetiming) {
+          if (item.precisetiming) {
             this.precisetiming = item.precisetiming;
           }
         }
@@ -814,7 +778,7 @@ export class Player {
       this.timeworn = 0;
     }
   }
-  addSpells(testItem: number | undefined) {
+  addSpells(testItem) {
     this.preporder = [];
     for (let spell of spells) {
       if (
@@ -996,7 +960,7 @@ export class Player {
       );
     this.stats.ap = ~~(this.stats.ap * this.stats.apmod);
   }
-  getAgiPerCrit(level: number) {
+  getAgiPerCrit(level) {
     let table = [
       0.25, 0.2381, 0.2381, 0.2273, 0.2174, 0.2083, 0.2083, 0.2, 0.1923, 0.1923,
       0.1852, 0.1786, 0.1667, 0.1613, 0.1563, 0.1515, 0.1471, 0.1389, 0.1351,
@@ -1006,9 +970,9 @@ export class Player {
       0.0633, 0.0625, 0.061, 0.0595, 0.0588, 0.0575, 0.0562, 0.0549, 0.0543,
       0.0532, 0.0521, 0.051, 0.05,
     ];
-    return table[parseInt(level.toString()) - 1];
+    return table[parseInt(level) - 1];
   }
-  getTargetSpellMiss(): number {
+  getTargetSpellMiss() {
     let resist = 100;
     let diff = this.target.level - this.level;
     if (diff == -2) resist = 200;

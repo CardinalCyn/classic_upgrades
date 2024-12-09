@@ -30,27 +30,33 @@ export type DropdownSettingField = {
   dropdownValues: { dropdownLabel: string; dropdownValue: string }[];
 };
 
+export type NumberSettingField = {
+  id: string;
+  label: string;
+  fieldType: "number";
+  defaultValue: number;
+};
+
+export type SliderSettingField = {
+  id: string;
+  label: string;
+  fieldType: "slider";
+  defaultValue: number;
+  minValue: number;
+  maxValue: number;
+};
+
+export type CheckboxSettingField = {
+  id: string;
+  label: string;
+  fieldType: "checkbox";
+  defaultValue: boolean;
+};
+
 export type SettingsField =
-  | {
-      id: string;
-      label: string;
-      fieldType: "number";
-      defaultValue: number;
-    }
-  | {
-      id: string;
-      label: string;
-      fieldType: "slider";
-      defaultValue: number;
-      minValue: number;
-      maxValue: number;
-    }
-  | {
-      id: string;
-      label: string;
-      fieldType: "checkbox";
-      defaultValue: boolean;
-    }
+  | NumberSettingField
+  | SliderSettingField
+  | CheckboxSettingField
   | DropdownSettingField;
 
 export type Race = (typeof races)[number];
@@ -61,23 +67,15 @@ export type GearSelectionProps = {
   resetGear: () => void;
 };
 
+type SettingsSetup = {
+  [key: string]: boolean | number | string;
+};
+
 export type SettingsProps = {
-  settingsSetup: {
-    [key: string]: {
-      checkbox?: boolean;
-      number?: number;
-      slider?: number;
-      dropdown?: string;
-    };
-  };
+  settingsSetup: SettingsSetup;
   handleSettingsUpdate: (
     settingName: string,
-    val: {
-      checkbox?: boolean;
-      number?: number;
-      slider?: number;
-      dropdown?: string;
-    },
+    val: boolean | number | string,
   ) => void;
 };
 
@@ -94,14 +92,7 @@ export type TalentsProps = {
 export type RotationProps = {
   classicMode: ClassicMode;
   playerLevel: number;
-  settingsSetup: {
-    [settingsFieldName: string]: {
-      checkbox?: boolean;
-      number?: number;
-      slider?: number;
-      dropdown?: string;
-    };
-  };
+  settingsSetup: SettingsSetup;
   rotationSetup: Spell[];
   handleRotationUpdate: (spellId: number, updates: Partial<Spell>) => void;
   resetRotation: () => void;
@@ -116,14 +107,7 @@ export type BuffsProps = {
   buffsSetup: (Buff & { active: boolean })[];
   resetBuffs: () => void;
   handleBuffUpdate: (buffId: number, toggle: boolean) => void;
-  settingsSetup: {
-    [settingsFieldName: string]: {
-      checkbox?: boolean;
-      number?: number;
-      slider?: number;
-      dropdown?: string;
-    };
-  };
+  settingsSetup: SettingsSetup;
   runesSetup: { [key: string]: (Rune & { active: boolean })[] };
 };
 
@@ -135,4 +119,32 @@ export type RunesProps = {
     runeSlotName: string,
   ) => void;
   resetRunes: () => void;
+};
+
+export type TargetConfig = {
+  level: number;
+  basearmor: number;
+  defense: number;
+  resistance: number;
+  speed: number;
+  mindmg: number;
+  maxdmg: number;
+  bleedreduction: number;
+};
+export type PlayerConfig = {
+  level: number;
+  race: Race;
+  aqbooks: boolean;
+  reactionmin: number;
+  reactionmax: number;
+  adjacent: number;
+  spellqueueing: boolean;
+};
+
+export type GetConfig = {
+  mode: "classic" | "sod";
+  playerConfig: PlayerConfig;
+  targetConfig: TargetConfig;
+  talents: { [key: string]: number };
+  gear: { [key: string]: Gear | null };
 };

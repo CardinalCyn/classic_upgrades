@@ -16,12 +16,7 @@ type CustomSliderProps = {
   currentValue: number | undefined;
   handleSettingsUpdate: (
     settingName: string,
-    val: {
-      checkbox?: boolean;
-      number?: number;
-      slider?: number;
-      dropdown?: string;
-    },
+    val: boolean | string | number,
   ) => void;
 };
 
@@ -40,9 +35,7 @@ export default function CustomSlider({
         max={settingsField.maxValue}
         step={1}
         onValueChange={(values) =>
-          handleSettingsUpdate(settingsField.id, {
-            slider: Number(values[0]),
-          })
+          handleSettingsUpdate(settingsField.id, Number(values[0]))
         }
         className="flex-grow"
       />

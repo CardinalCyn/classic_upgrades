@@ -1,3 +1,5 @@
+import * as Classes from "./spell";
+
 var WEAPONTYPE = {
   MACE: 0,
   SWORD: 1,
@@ -15,7 +17,7 @@ var WEAPONTYPE = {
   AXE_2H: 23,
 };
 
-class Weapon {
+export class Weapon {
   constructor(player, item, enchant, tempenchant, offhand, twohand) {
     this.player = player;
     this.id = item.id;
@@ -90,9 +92,14 @@ class Weapon {
       // custom spells
       if (item.proc.spell) {
         if (!player.auras[item.proc.spell.toLowerCase()]) {
-          player.auras[item.proc.spell.toLowerCase()] = eval(
-            "new " + item.proc.spell + "(player)",
-          );
+          const ClassConstructor = Classes[item.proc.spell];
+          if (ClassConstructor) {
+            player.auras[item.proc.spell.toLowerCase()] = new ClassConstructor(
+              player,
+            );
+          } else {
+            console.error(`Class ${item.proc.spell} not found`);
+          }
         }
         this.proc1.spell = player.auras[item.proc.spell.toLowerCase()];
       }
