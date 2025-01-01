@@ -37,30 +37,19 @@ const GearSelectModal = ({
   const [searchQuery, setSearchQuery] = useState("");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const filteredGear: Gear[] = useMemo(() => {
+  const filteredGear = useMemo(() => {
     const gearSlotItems =
-      gear[gearSlot.gearJsSlotName as keyof typeof gear] || [];
-    const gearSODSlotItems =
-      gearSod[gearSlot.gearJsSlotName as keyof typeof gearSod] || [];
+      gear[gearSlot.gearJsSlotName as keyof typeof gear].map(
+        (gearPiece: any) => {
+          return { ...gearPiece, p: gearPiece.p || "" };
+        },
+      ) || [];
 
-    const filteredSODGear = gearSODSlotItems.filter((gear) =>
-      gear.name.toLowerCase().includes(searchQuery.toLowerCase()),
+    // Convert to array and filter by search query
+    return gearSlotItems.filter(
+      (gear) =>
+        gear.p && gear.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
-
-    return gearSlotItems
-      .filter((gear) =>
-        gear.name.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
-      .map((piece) => {
-        const somPiece = filteredSODGear.find(
-          (somGear) => somGear.name === piece.name,
-        );
-        return {
-          ...piece,
-          p: "p" in piece ? piece.p : somPiece?.p || "",
-        } as Gear; // Type assertion here
-      })
-      .filter((gear) => gear.p);
   }, [searchQuery, gearSlot.gearJsSlotName]);
 
   const handleSelectGear = useCallback(
@@ -111,7 +100,7 @@ const GearSelectModal = ({
           style={{ height: "calc(80vh - 200px)" }}
         >
           <div className="grid grid-cols-1 gap-2">
-            {filteredGear.map((gear) => {
+            {filteredGear.map((gear, index) => {
               if (!gear.p) return null;
               return (
                 <div

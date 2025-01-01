@@ -1,9 +1,9 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { warriorTalents } from "../utils/warriorTalents";
 import TalentIcon from "./talentIcon";
 import { TalentsProps } from "../utils/types";
+import { Talent, talents } from "../sim_lib/talents";
 
 function Talents({
   talentsSetup,
@@ -25,26 +25,26 @@ function Talents({
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {warriorTalents.map((talentTree, treeIndex) => (
+          {talents.map((talentTree, treeIndex) => (
             <div key={talentTree.n} className="border rounded p-2">
               <h3 className="text-lg font-semibold mb-2">{talentTree.n}</h3>
               <div className="grid grid-rows-7 grid-cols-4 gap-2">
                 {[...Array(7)].map((_, rowIndex) =>
                   [...Array(4)].map((_, colIndex) => {
-                    const talent = talentTree.t.find(
-                      (t) => t.x === colIndex && t.y === rowIndex,
-                    );
+                    const talent: Talent | undefined = talentsSetup[
+                      treeIndex
+                    ].t.find((t) => t.x === colIndex && t.y === rowIndex);
                     return talent ? (
                       <TalentIcon
                         key={`${treeIndex}-${talent.n}`}
                         talent={talent}
-                        currentCount={talentsSetup[talent.n] || 0}
+                        currentCount={talent.c || 0}
                         talentPointsRemaining={talentPointsRemaining}
                         onAddPoint={() =>
-                          handleTalentPointUpdate(talent.n, "add")
+                          handleTalentPointUpdate(talent.i, "add")
                         }
                         onRemovePoint={() =>
-                          handleTalentPointUpdate(talent.n, "remove")
+                          handleTalentPointUpdate(talent.i, "remove")
                         }
                       />
                     ) : (

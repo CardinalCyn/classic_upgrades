@@ -1,14 +1,10 @@
 import { RuneSlot } from "../sim_lib/runes";
 import {
-  CheckboxSettingField,
   ClassicMode,
-  DropdownSettingField,
   GearSlotData,
-  NumberSettingField,
   PlayerConfig,
   Race,
   SettingsField,
-  SliderSettingField,
   TargetConfig,
 } from "./types";
 
@@ -52,19 +48,77 @@ export const gearSlotData: GearSlotData[] = [
 
 export const classNames = ["Warrior", "Rogue"];
 
-export const equipmentStats = [
-  "Attack Power",
-  "Strength",
-  "Agility",
-  "Hit",
-  "Skill",
-  "Miss",
-  "Crit",
-  "Crit Cap",
-  "Dmg %",
-  "Haste",
-  "Sets",
-] as const;
+export const characterStatsMap: {
+  statValue: string;
+  statLabel: string;
+  unit: "none" | "percentage";
+  multiplier: 1 | 100;
+}[] = [
+  { statLabel: "Attack Power", statValue: "ap", unit: "none", multiplier: 1 },
+  { statLabel: "Strength", statValue: "str", unit: "none", multiplier: 1 },
+  { statLabel: "Agility", statValue: "agi", unit: "none", multiplier: 1 },
+  { statLabel: "Hit", statValue: "hit", unit: "percentage", multiplier: 100 },
+  { statLabel: "Skill", statValue: "skill", unit: "none", multiplier: 1 },
+  { statLabel: "Miss", statValue: "miss", unit: "percentage", multiplier: 100 },
+  {
+    statLabel: "Dodge",
+    statValue: "dodge",
+    unit: "percentage",
+    multiplier: 100,
+  },
+  { statLabel: "Crit", statValue: "crit", unit: "percentage", multiplier: 100 },
+  {
+    statLabel: "Crit Cap",
+    statValue: "critcap",
+    unit: "percentage",
+    multiplier: 100,
+  },
+  {
+    statLabel: "Dmg %",
+    statValue: "dmgmod",
+    unit: "percentage",
+    multiplier: 100,
+  },
+  {
+    statLabel: "Haste",
+    statValue: "haste",
+    unit: "percentage",
+    multiplier: 100,
+  },
+  {
+    statLabel: "Shadow Resist",
+    statValue: "shadow-resist",
+    unit: "none",
+    multiplier: 1,
+  },
+  {
+    statLabel: "Arcane Resist",
+    statValue: "arcane-resist",
+    unit: "none",
+    multiplier: 1,
+  },
+  {
+    statLabel: "Nature Resist",
+    statValue: "nature-resist",
+    unit: "none",
+    multiplier: 1,
+  },
+  {
+    statLabel: "Frost Resist",
+    statValue: "frost-resist",
+    unit: "none",
+    multiplier: 1,
+  },
+  {
+    statLabel: "Fire Resist",
+    statValue: "fire-resist",
+    unit: "none",
+    multiplier: 1,
+  },
+  { statLabel: "Sets", statValue: "sets", unit: "none", multiplier: 1 },
+];
+
+export type StatKey = (typeof characterStatsMap)[number]["statValue"];
 
 export const raceData = [
   {
@@ -345,169 +399,28 @@ export const getPlayerConfig = (settingsSetup: {
   [settingsFieldName: string]: string | number | boolean;
 }): PlayerConfig => {
   return {
-    adjacent:
-      settingsSetup.adjacent ||
-      (settingsFields.find((field) => field.id === "adjacent") &&
-        "defaultValue" in
-          settingsFields.find((field) => field.id === "adjacent")!)
-        ? (
-            settingsFields.find(
-              (field) => field.id === "adjacent",
-            )! as SliderSettingField
-          ).defaultValue
-        : 0,
-    aqbooks:
-      settingsSetup.aqbooks ||
-      (settingsFields.find((field) => field.id === "aqbooks") &&
-        "defaultValue" in
-          settingsFields.find((field) => field.id === "aqbooks")!)
-        ? (
-            settingsFields.find(
-              (field) => field.id === "aqbooks",
-            )! as CheckboxSettingField
-          ).defaultValue
-        : false,
-    level:
-      settingsSetup.level ||
-      (settingsFields.find((field) => field.id === "level") &&
-        "defaultValue" in settingsFields.find((field) => field.id === "level")!)
-        ? (
-            settingsFields.find(
-              (field) => field.id === "level",
-            )! as SliderSettingField
-          ).defaultValue
-        : 60,
-    race:
-      settingsSetup.race ||
-      (settingsFields.find((field) => field.id === "race") &&
-        "defaultDropdownValue" in
-          settingsFields.find((field) => field.id === "race")!)
-        ? ((
-            settingsFields.find(
-              (field) => field.id === "race",
-            )! as DropdownSettingField
-          ).defaultDropdownValue as Race)
-        : "Human",
-    reactionmax:
-      settingsSetup.reactionmax ||
-      (settingsFields.find((field) => field.id === "reactionmax") &&
-        "defaultValue" in
-          settingsFields.find((field) => field.id === "reactionmax")!)
-        ? (
-            settingsFields.find(
-              (field) => field.id === "reactionmax",
-            )! as NumberSettingField
-          ).defaultValue
-        : 60,
-    reactionmin:
-      settingsSetup.reactionmin ||
-      (settingsFields.find((field) => field.id === "reactionmin") &&
-        "defaultValue" in
-          settingsFields.find((field) => field.id === "reactionmin")!)
-        ? (
-            settingsFields.find(
-              (field) => field.id === "reactionmin",
-            )! as NumberSettingField
-          ).defaultValue
-        : 60,
-    spellqueueing:
-      settingsSetup.spellqueueing ||
-      (settingsFields.find((field) => field.id === "spellqueueing") &&
-        "defaultValue" in
-          settingsFields.find((field) => field.id === "spellqueueing")!)
-        ? (
-            settingsFields.find(
-              (field) => field.id === "spellqueueing",
-            )! as CheckboxSettingField
-          ).defaultValue
-        : false,
+    adjacent: settingsSetup.adjacent as number,
+    aqbooks: settingsSetup.aqbooks as boolean,
+    level: settingsSetup.level as number,
+    race: settingsSetup.race as Race,
+    reactionmax: settingsSetup.reactionmax as number,
+    reactionmin: settingsSetup.reactionmin as number,
+    spellqueueing: settingsSetup.spellqueueing as boolean,
   };
 };
 
 export const getTargetConfig = (settingsSetup: {
   [settingsFieldName: string]: string | number | boolean;
 }): TargetConfig => {
-  const targetLevel =
-    settingsSetup.targetlevel ||
-    (settingsFields.find((field) => field.id === "targetlevel") &&
-      "defaultValue" in
-        settingsFields.find((field) => field.id === "targetlevel")!)
-      ? (
-          settingsFields.find(
-            (field) => field.id === "targetlevel",
-          )! as NumberSettingField
-        ).defaultValue
-      : 63;
+  const targetLevel = settingsSetup.targetlevel as number;
   return {
-    basearmor:
-      settingsSetup.targetbasearmor ||
-      (settingsFields.find((field) => field.id === "targetbasearmor") &&
-        "defaultValue" in
-          settingsFields.find((field) => field.id === "targetbasearmor")!)
-        ? (
-            settingsFields.find(
-              (field) => field.id === "targetbasearmor",
-            )! as NumberSettingField
-          ).defaultValue
-        : defaultTargetBaseArmor,
-    bleedreduction:
-      Number(settingsSetup.bleedreduction) ||
-      (settingsFields.find((field) => field.id === "bleedreduction") &&
-        "defaultDropdownValue" in
-          settingsFields.find((field) => field.id === "bleedreduction")!)
-        ? Number(
-            (
-              settingsFields.find(
-                (field) => field.id === "bleedreduction",
-              )! as DropdownSettingField
-            ).defaultDropdownValue,
-          )
-        : Number("0"),
+    basearmor: settingsSetup.targetbasearmor as number,
+    bleedreduction: Number(settingsSetup.bleedreduction),
     defense: targetLevel * 5,
-    maxdmg:
-      settingsSetup.targetmaxdmg ||
-      (settingsFields.find((field) => field.id === "targetmaxdmg") &&
-        "defaultValue" in
-          settingsFields.find((field) => field.id === "targetmaxdmg")!)
-        ? (
-            settingsFields.find(
-              (field) => field.id === "targetmaxdmg",
-            )! as NumberSettingField
-          ).defaultValue
-        : 300,
-    mindmg:
-      settingsSetup.targetmindmg ||
-      (settingsFields.find((field) => field.id === "targetmindmg") &&
-        "defaultValue" in
-          settingsFields.find((field) => field.id === "targetmindmg")!)
-        ? (
-            settingsFields.find(
-              (field) => field.id === "targetmindmg",
-            )! as NumberSettingField
-          ).defaultValue
-        : 200,
+    maxdmg: settingsSetup.targetmaxdmg as number,
+    mindmg: settingsSetup.targetmindmg as number,
     level: targetLevel,
-    resistance:
-      settingsSetup.targetresistance ||
-      (settingsFields.find((field) => field.id === "targetresistance") &&
-        "defaultValue" in
-          settingsFields.find((field) => field.id === "targetresistance")!)
-        ? (
-            settingsFields.find(
-              (field) => field.id === "targetresistance",
-            )! as NumberSettingField
-          ).defaultValue
-        : 24,
-    speed:
-      settingsSetup.targetspeed ||
-      (settingsFields.find((field) => field.id === "targetspeed") &&
-        "defaultValue" in
-          settingsFields.find((field) => field.id === "targetspeed")!)
-        ? (
-            settingsFields.find(
-              (field) => field.id === "targetspeed",
-            )! as NumberSettingField
-          ).defaultValue
-        : 24,
+    resistance: settingsSetup.targetresistance as number,
+    speed: settingsSetup.targetspeed as number,
   };
 };

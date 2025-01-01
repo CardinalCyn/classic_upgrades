@@ -5,7 +5,6 @@ import GearStats from "../components/gear/gearStats";
 import Customize from "../components/customize";
 import {
   defaultTargetBaseArmor,
-  equipmentStats,
   getPlayerConfig,
   getTargetConfig,
 } from "../utils/constants";
@@ -18,10 +17,15 @@ import { settingsFields } from "../utils/constants";
 import { Buff, buffs } from "../sim_lib/buffs";
 import { Gear } from "../sim_lib/gear";
 import { Rune, runes } from "../sim_lib/runes";
-import { warriorTalents } from "../utils/warriorTalents";
 import { gearSlotData, runeSlotData } from "../utils/constants";
-import { Player } from "../sim_lib/classes/player";
-import { GetConfig } from "../utils/types";
+import { Base, Player } from "../sim_lib/classes/player";
+import { GetConfig, Report } from "../utils/types";
+import { Talent, talents, TalentTreeItem } from "../sim_lib/talents";
+import {
+  SimulationConfig,
+  SimulationStartParams,
+  SimulationWorkerParallel,
+} from "../sim_lib/classes/simulation";
 
 function Warrior(): React.JSX.Element {
   const [simulatedDPS, setSimulatedDPS] = useState(0);
@@ -77,15 +81,6 @@ function Warrior(): React.JSX.Element {
     }));
   };
 
-  const [talentsSetup, setTalentsSetup] = useState(
-    warriorTalents.reduce((acc, talent) => {
-      talent.t.forEach((t) => {
-        acc[t.n] = 0;
-      });
-      return acc;
-    }, {} as { [key: string]: number }),
-  );
-
   const [runesSetup, setRunesSetup] = useState(
     runeSlotData.reduce((acc, runeSlotName) => {
       const mappedRunes: (Rune & { active: boolean })[] = runes[
@@ -125,39 +120,57 @@ function Warrior(): React.JSX.Element {
     }));
   };
 
+  const [talentsSetup, setTalentsSetup] = useState<TalentTreeItem[]>(
+    talents.map((tree) => ({
+      ...tree,
+      t: tree.t.map((talent) => ({ ...talent, c: 0 })),
+    })),
+  );
+
   const [talentPointsRemaining, setTalentPointsRemaining] = useState(51);
 
   const handleTalentPointUpdate = (
-    talentName: string,
+    talentToUpdateId: number,
     operation: "add" | "remove",
   ) => {
-    setTalentsSetup((prev) => ({
-      ...prev,
-      [talentName]:
-        operation === "add"
-          ? Math.min(
-              (prev[talentName] || 0) + 1,
-              warriorTalents
-                .find((tree) => tree.t.some((t) => t.n === talentName))
-                ?.t.find((t) => t.n === talentName)?.m || 0,
-            )
-          : Math.max((prev[talentName] || 0) - 1, 0),
-    }));
+    setTalentsSetup((prev: TalentTreeItem[]) => {
+      const updatedTalents = prev.map((tree) => ({
+        ...tree,
+        t: tree.t.map((talent: Talent) => {
+          if (talent.i !== talentToUpdateId) return talent;
+          const maxPoints = talent.m;
 
-    setTalentPointsRemaining((prev) =>
-      operation === "add" ? prev - 1 : prev + 1,
-    );
+          if (
+            operation === "add" &&
+            talent.c < maxPoints &&
+            talentPointsRemaining > 0
+          ) {
+            return { ...talent, c: talent.c + 1 };
+          } else if (operation === "remove" && talent.c > 0) {
+            return { ...talent, c: talent.c - 1 };
+          }
+          return talent;
+        }),
+      }));
+
+      return updatedTalents;
+    });
+
+    // Separate state update for talent points
+    if (operation === "add" && talentPointsRemaining > 0) {
+      setTalentPointsRemaining((prev) => prev - 1);
+    } else if (operation === "remove") {
+      setTalentPointsRemaining((prev) => prev + 1);
+    }
   };
 
   const resetTalentPoints = () => {
     setTalentPointsRemaining(51);
     setTalentsSetup(
-      warriorTalents.reduce((acc, talent) => {
-        talent.t.forEach((t) => {
-          acc[t.n] = 0;
-        });
-        return acc;
-      }, {} as { [key: string]: number }),
+      talents.map((tree) => ({
+        ...tree,
+        t: tree.t.map((talent) => ({ ...talent, c: 0 })),
+      })),
     );
   };
 
@@ -220,22 +233,97 @@ function Warrior(): React.JSX.Element {
     resetTalentPoints();
   }, [settingsSetup, classicMode]);
 
-  function simulateDps() {
+  function getFullConfig(): GetConfig {
     const playerConfig = getPlayerConfig(settingsSetup);
-
     const targetConfig = getTargetConfig(settingsSetup);
-
-    const config: GetConfig = {
+    return {
       mode: classicMode === "Classic" ? "classic" : "sod",
       playerConfig,
       targetConfig,
       talents: talentsSetup,
       gear: gearSetup,
+      buffs: buffsSetup,
+      spells: rotationSetup,
     };
-    const player = new Player(config, undefined, undefined, undefined);
-    console.log("player: ");
-    console.log(player);
   }
+  function getSimulationConfig(): SimulationConfig {
+    return {
+      batching: settingsSetup.batching as number,
+      executeperc: settingsSetup.executeperc as number,
+      iterations: settingsSetup.simulations as number,
+      startrage: settingsSetup.startrage as number,
+      timesecsmax: settingsSetup.timesecsmax as number,
+      timesecsmin: settingsSetup.timesecsmin as number,
+    };
+  }
+
+  function simulateDps() {
+    const fullConfig = getFullConfig(); // Use the current state configuration
+    const player = new Player(fullConfig, undefined, undefined, undefined);
+    const stats = Object.keys(player.stats).length ? player.stats : player.base;
+    setCharacterStats(stats);
+    const MAX_WORKERS = ~~Math.min(8, (navigator.hardwareConcurrency || 8) / 2);
+    const sim = new SimulationWorkerParallel(
+      MAX_WORKERS,
+      (report: Report) => {
+        console.log(report);
+        const mean = report.totaldmg / report.totalduration;
+        setSimulatedDPS(mean);
+        const s1 = report.sumdps,
+          s2 = report.sumdps2,
+          n = report.iterations;
+        const varmean = (s2 - (s1 * s1) / n) / (n - 1) / n;
+        const err = (1.96 * Math.sqrt(varmean)).toFixed(2);
+        const time = (report.endtime - report.starttime) / 1000;
+        const mindps = report.mindps.toFixed(2);
+        const maxdps = report.maxdps.toFixed(2);
+        const res = {
+          mean,
+          err,
+          time,
+          mindps,
+          maxdps,
+        };
+        console.log(res);
+      },
+      (iteration: number, report: Report) => {
+        const perc = parseInt(
+          (Number(iteration / report.iterations) * 100).toString(),
+        );
+        console.log(perc);
+      },
+      (error: unknown) => {
+        console.error(error);
+      },
+    );
+    const params: SimulationStartParams = {
+      sim: getSimulationConfig(),
+      fullReport: true,
+      player: [
+        undefined,
+        undefined,
+        undefined,
+        { ...getPlayerConfig(settingsSetup), target: player.target },
+      ],
+      globals: {
+        buffs: buffsSetup.map((buff) => buff.id),
+        enchant: {},
+        rotation: rotationSetup,
+        runes: {},
+        sod: classicMode === "Season of Discovery",
+        talents: talentsSetup,
+      },
+    };
+    console.log("starting sim page.tsx");
+    console.log(sim);
+    sim.start(params);
+  }
+
+  const [characterStats, setCharacterStats] = useState<Base>(() => {
+    const fullConfig = getFullConfig();
+    const player = new Player(fullConfig, undefined, undefined, undefined);
+    return Object.keys(player.stats).length ? player.stats : player.base;
+  });
 
   return (
     <div className="h-screen">
@@ -250,11 +338,7 @@ function Warrior(): React.JSX.Element {
               </div>
             </CardContent>
           </Card>
-          <GearStats
-            gearStats={equipmentStats.map((stat) => {
-              return { statName: stat, statValue: 0 };
-            })}
-          />
+          <GearStats characterStats={characterStats} />
         </div>
         <div className="col-span-2 w-full">
           <Customize

@@ -1,10 +1,16 @@
+import * as Classes from "./spell";
+
 import { GetConfig, Race, TargetConfig } from "@/app/utils/types";
 import { levelstats } from "../levelstats";
 import { Gear } from "../gear";
 import { enchant, sets } from "../enchants";
-import { Weapon } from "./weapon";
+import { Weapon, WEAPONTYPE } from "./weapon";
+import { Buff } from "../buffs";
+import { Spell } from "../spells";
+import { DEFENSETYPE, RESULT, rng10k, SCHOOL } from "./simulation";
+import { TalentTreeItem } from "../talents";
 
-type Base = {
+export type Base = {
   ap: number;
   aprace?: number;
   agi: number;
@@ -41,7 +47,7 @@ type Base = {
   defense: number;
 };
 
-type Resist = {
+export type Resist = {
   shadow: number;
   arcane: number;
   nature: number;
@@ -59,8 +65,10 @@ type PlayerGetConfig = {
   mode: "classic" | "sod";
   spellqueueing: boolean;
   target: TargetConfig;
-  talents: { [talentName: string]: number };
+  talents: TalentTreeItem[];
   gear: { [key: string]: Gear | null };
+  buffs: (Buff & { active: boolean })[];
+  spells: Spell[];
 };
 
 export class Player {
@@ -71,6 +79,8 @@ export class Player {
       target: { ...props.targetConfig },
       talents: props.talents,
       gear: props.gear,
+      buffs: props.buffs,
+      spells: props.spells,
     };
   }
   rage: number;
@@ -105,9 +115,10 @@ export class Player {
   spellqueueing: boolean;
   timeworn: number;
   base: Base;
+  stats: Base;
   mh: null | Weapon;
   oh: null | Weapon;
-  talents: { [talentName: string]: number };
+  talents: TalentTreeItem[];
   precisetiming: boolean;
   items: number[];
   spells: { [key: string]: any };
@@ -126,6 +137,8 @@ export class Player {
     this.config = config;
     const talents = config.talents;
     const gear = config.gear;
+    const buffs = config.buffs;
+    const spells = config.spells;
     this.rage = 0;
     this.ragemod = 1;
     this.level = config.level;
@@ -159,7 +172,7 @@ export class Player {
     this.spelldamage = 0;
     this.target = config.target;
     this.mode = config.mode;
-    this.bleedmod = parseFloat(this.target.bleedreduction);
+    this.bleedmod = parseFloat(this.target.bleedreduction.toString());
     this.spellqueueing = config.spellqueueing;
     this.target.misschance = this.getTargetSpellMiss();
     this.target.mitigation = this.getTargetSpellMitigation();
@@ -235,36 +248,39 @@ export class Player {
     this.items = [];
     this.addRace();
     this.talents = talents;
-    // this.addTalents(talents);
-    this.addGear(gear);
+    this.addTalents(talents);
+    this.addGear(buffs, gear);
     if (!this.mh) return;
     this.addSets();
     this.addEnchants();
     this.addTempEnchants();
     this.preAddRunes();
-    this.addBuffs();
-    this.addSpells(testItem);
+    this.addBuffs(buffs);
+    this.addSpells(testItem, spells);
     this.sortSpells();
     this.addRunes();
     this.setSkills();
-    if (this.talents.flurry) this.auras.flurry = new Flurry(this);
+    if (this.talents.flurry) this.auras.flurry = new Classes.Flurry(this);
     if (this.talents.deepwounds && this.mode !== "classic")
       this.auras.deepwounds =
-        this.mode == "sod" ? new DeepWounds(this) : new OldDeepWounds(this);
+        this.mode == "sod"
+          ? new Classes.DeepWounds(this)
+          : new Classes.OldDeepWounds(this);
     if (this.adjacent && this.talents.deepwounds && this.mode !== "classic") {
       for (let i = 2; i <= this.adjacent + 1; i++)
         this.auras["deepwounds" + i] =
           this.mode == "sod"
-            ? new DeepWounds(this, null, i)
-            : new OldDeepWounds(this, null, i);
+            ? new Classes.DeepWounds(this, null, i)
+            : new Classes.OldDeepWounds(this, null, i);
     }
 
-    this.spells.stanceswitch = new StanceSwitch(this);
-    if (this.spells.bloodrage) this.auras.bloodrage = new BloodrageAura(this);
+    this.spells.stanceswitch = new Classes.StanceSwitch(this);
+    if (this.spells.bloodrage)
+      this.auras.bloodrage = new Classes.BloodrageAura(this);
     if (this.spells.berserkerrage)
-      this.auras.berserkerrage = new BerserkerRageAura(this);
+      this.auras.berserkerrage = new Classes.BerserkerRageAura(this);
     if (this.spells.shieldslam)
-      this.auras.defendersresolve = new DefendersResolve(this);
+      this.auras.defendersresolve = new Classes.DefendersResolve(this);
 
     if (
       (this.basestance == "def" || this.basestance == "glad") &&
@@ -277,8 +293,8 @@ export class Player {
     }
 
     if (this.items.includes(233490)) {
-      this.auras.obsidianstrength = new ObsidianStrength(this);
-      this.auras.obsidianhaste = new ObsidianHaste(this);
+      this.auras.obsidianstrength = new Classes.ObsidianStrength(this);
+      this.auras.obsidianhaste = new Classes.ObsidianHaste(this);
     }
 
     this.update();
@@ -287,10 +303,10 @@ export class Player {
   }
   initStances() {
     this.stance = this.basestance;
-    this.auras.battlestance = new BattleStance(this);
-    this.auras.berserkerstance = new BerserkerStance(this);
-    this.auras.defensivestance = new DefensiveStance(this);
-    this.auras.gladiatorstance = new GladiatorStance(this);
+    this.auras.battlestance = new Classes.BattleStance(this);
+    this.auras.berserkerstance = new Classes.BerserkerStance(this);
+    this.auras.defensivestance = new Classes.DefensiveStance(this);
+    this.auras.gladiatorstance = new Classes.GladiatorStance(this);
     if (this.basestance == "battle") this.auras.battlestance.timer = 1;
     if (this.basestance == "zerk") this.auras.berserkerstance.timer = 1;
     if (this.basestance == "def") this.auras.defensivestance.timer = 1;
@@ -330,7 +346,7 @@ export class Player {
       }
     }
   }
-  addTalents(talents: { [talentName: string]: number }) {
+  addTalents(talents: TalentTreeItem[]) {
     this.talents = {};
     for (let tree in talents) {
       for (let talent of talents[tree].t) {
@@ -339,7 +355,10 @@ export class Player {
     }
     if (this.talents.defense) this.base.defense += this.talents.defense;
   }
-  addGear(gear: { [key: string]: Gear | null }) {
+  addGear(
+    buffs: (Buff & { active: boolean })[],
+    gear: { [key: string]: Gear | null },
+  ) {
     for (let type in gear) {
       if (!gear[type]) continue;
       const item = gear[type];
@@ -371,7 +390,7 @@ export class Player {
       if (item.d) this.base.defense += item.d;
 
       if (type == "mainhand" || type == "offhand" || type == "twohand")
-        this.addWeapon(item, type);
+        this.addWeapon(item, type, buffs);
 
       if (
         item.proc &&
@@ -410,7 +429,7 @@ export class Player {
       if (item.id == 215166) this.base["moddmgdone"] += 3;
       if (item.id == 228089) this.base["moddmgdone"] += 4;
       if (item.id == 227809) this.base["moddmgdone"] += 3;
-      if (item.id == 230003 || item.id == 23000399)
+      if (item.id == 230003 || item.ida == 23000399)
         this.base["moddmgdone"] += 4;
       if (item.id == 233638) this.base["moddmgdone"] += 3;
       if (item.id == 234761) this.base["moddmgdone"] += 4;
@@ -426,7 +445,7 @@ export class Player {
       this.items.push(item.id);
     }
   }
-  addWeapon(item, type) {
+  addWeapon(item, type, buffs: (Buff & { active: boolean })[]) {
     let ench, tempench;
     //FIXME: replace later
     for (let item of enchant[type]) {
@@ -442,15 +461,15 @@ export class Player {
     }
 
     if (type == "mainhand")
-      this.mh = new Weapon(this, item, ench, tempench, false, false);
+      this.mh = new Weapon(this, item, ench, tempench, false, false, buffs);
 
     if (type == "offhand" && item.type != "Shield")
-      this.oh = new Weapon(this, item, ench, tempench, true, false);
+      this.oh = new Weapon(this, item, ench, tempench, true, false, buffs);
 
     if (type == "offhand" && item.type == "Shield") this.shield = item;
 
     if (type == "twohand")
-      this.mh = new Weapon(this, item, ench, tempench, false, true);
+      this.mh = new Weapon(this, item, ench, tempench, false, true, buffs);
   }
   addEnchants() {
     for (let type in enchant) {
@@ -660,7 +679,7 @@ export class Player {
       }
     }
   }
-  addBuffs() {
+  addBuffs(buffs: (Buff & { active: boolean })[]) {
     this.target.basearmorbuffed = this.target.basearmor;
     for (let buff of buffs) {
       if (buff.active && buff.improvedexposed) {
@@ -778,7 +797,7 @@ export class Player {
       this.timeworn = 0;
     }
   }
-  addSpells(testItem) {
+  addSpells(testItem, spells: Spell[]) {
     this.preporder = [];
     for (let spell of spells) {
       if (
@@ -960,7 +979,7 @@ export class Player {
       );
     this.stats.ap = ~~(this.stats.ap * this.stats.apmod);
   }
-  getAgiPerCrit(level) {
+  getAgiPerCrit(level: number) {
     let table = [
       0.25, 0.2381, 0.2381, 0.2273, 0.2174, 0.2083, 0.2083, 0.2, 0.1923, 0.1923,
       0.1852, 0.1786, 0.1667, 0.1613, 0.1563, 0.1515, 0.1471, 0.1389, 0.1351,
@@ -1254,7 +1273,11 @@ export class Player {
   }
   addRage(dmg, result, weapon, spell) {
     let oldRage = this.rage;
-    if (!spell || spell instanceof HeroicStrike || spell instanceof Cleave) {
+    if (
+      !spell ||
+      spell instanceof Classes.HeroicStrike ||
+      spell instanceof Classes.Cleave
+    ) {
       if (
         result != RESULT.MISS &&
         result != RESULT.DODGE &&
@@ -1265,7 +1288,7 @@ export class Player {
       }
     }
     if (spell) {
-      if (spell instanceof Execute) spell.result = result;
+      if (spell instanceof Classes.Execute) spell.result = result;
       if (result == RESULT.MISS || result == RESULT.DODGE) {
         this.rage += spell.refund ? spell.cost * 0.8 : 0;
         oldRage += (spell.cost || 0) + (spell.usedrage || 0); // prevent cbr proccing on refunds
@@ -1820,7 +1843,7 @@ export class Player {
       tmp = 0;
     }
     let crit = this.crit + weapon.crit;
-    if (spell instanceof Overpower) crit += this.talents.overpowercrit;
+    if (spell instanceof Classes.Overpower) crit += this.talents.overpowercrit;
     tmp += crit * 100;
     if (roll < tmp && !spell.nocrit) return RESULT.CRIT;
     return RESULT.HIT;
@@ -1900,7 +1923,7 @@ export class Player {
         })${adjacent ? " (Adjacent)" : ""}`,
       ); /* end-log */
 
-    if (spell instanceof Cleave && !adjacent) {
+    if (spell instanceof Classes.Cleave && !adjacent) {
       this.nextswinghs = true;
       done += this.attackmh(weapon, 1, done);
     }
@@ -1969,7 +1992,7 @@ export class Player {
       adjacent,
       damageSoFar,
     );
-    if (spell instanceof SunderArmor) {
+    if (spell instanceof Classes.SunderArmor) {
       procdmg += this.procattack(spell, this.mh, result, adjacent, damageSoFar);
     }
 
@@ -2064,7 +2087,7 @@ export class Player {
       this.overpowerrend &&
       this.auras.rend &&
       this.auras.rend.timer &&
-      spell instanceof Overpower
+      spell instanceof Classes.Overpower
     )
       this.auras.rend.refresh();
   }
@@ -2072,8 +2095,8 @@ export class Player {
     let procdmg = 0;
     let extras = 0;
     let batchedextras = 0;
-    if (spell instanceof ThunderClap) return 0;
-    if (spell instanceof ShieldSlam) {
+    if (spell instanceof Classes.ThunderClap) return 0;
+    if (spell instanceof Classes.ShieldSlam) {
       if (result != RESULT.MISS && result != RESULT.DODGE) {
         if (this.mode == "sod") this.auras.defendersresolve.use();
 
@@ -2090,14 +2113,14 @@ export class Player {
       return 0;
     }
     if (result != RESULT.MISS && result != RESULT.DODGE) {
-      if (spell instanceof Execute) {
+      if (spell instanceof Classes.Execute) {
         this.rage = 0;
         if (this.auras.suddendeath && this.auras.suddendeath.timer) {
           this.rage = 10;
           this.auras.suddendeath.remove();
         }
       }
-      if (spell instanceof Slam && this.slammainreset) {
+      if (spell instanceof Classes.Slam && this.slammainreset) {
         if (this.spells.mortalstrike) this.spells.mortalstrike.timer = 0;
         if (this.spells.bloodthirst) this.spells.bloodthirst.timer = 0;
         if (this.spells.shieldslam) this.spells.shieldslam.timer = 0;
@@ -2307,10 +2330,10 @@ export class Player {
       // Blood Surge
       if (
         this.bloodsurge &&
-        (spell instanceof Whirlwind ||
-          spell instanceof Bloodthirst ||
-          spell instanceof HeroicStrike ||
-          spell instanceof QuickStrike) &&
+        (spell instanceof Classes.Whirlwind ||
+          spell instanceof Classes.Bloodthirst ||
+          spell instanceof Classes.HeroicStrike ||
+          spell instanceof Classes.QuickStrike) &&
         rng10k() < 3000
       ) {
         this.freeslam = true;
@@ -2321,7 +2344,7 @@ export class Player {
       if (
         this.swordboard &&
         this.spells.shieldslam &&
-        spell instanceof SunderArmor &&
+        spell instanceof Classes.SunderArmor &&
         rng10k() < 3000
       ) {
         this.freeshieldslam = true;
@@ -2340,9 +2363,9 @@ export class Player {
       // Fresh Meat
       if (
         this.freshmeat &&
-        (spell instanceof Bloodthirst ||
-          spell instanceof MortalStrike ||
-          spell instanceof ShieldSlam) &&
+        (spell instanceof Classes.Bloodthirst ||
+          spell instanceof Classes.MortalStrike ||
+          spell instanceof Classes.ShieldSlam) &&
         (this.auras.freshmeat.firstuse || rng10k() < 1000)
       ) {
         this.auras.freshmeat.use();

@@ -3182,7 +3182,7 @@ export const gear = {
         frost: 40,
       },
       phase: "6",
-      id: 22702,
+      id: 22699,
       q: "4",
       i: "80",
       p: "inv_pants_mail_15",

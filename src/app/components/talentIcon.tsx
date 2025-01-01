@@ -1,11 +1,6 @@
 import React from "react";
 import Image from "next/image";
-import {
-  imageDomain,
-  invalidBattleSquawkIds,
-  validBattleSquawkId,
-  WEB_DB_URL,
-} from "../utils/constants";
+import { imageDomain, WEB_DB_URL } from "../utils/constants";
 
 type TalentIconProps = {
   talent: any;
@@ -46,7 +41,7 @@ const TalentIcon = ({
       }`}
       aria-disabled="true"
       className={`relative cursor-pointer select-none
-          `}
+            `}
       data-count={currentCount}
       data-x={talent.x}
       data-y={talent.y}

@@ -1,6 +1,7 @@
+import { rng } from "./simulation";
 import * as Classes from "./spell";
 
-var WEAPONTYPE = {
+export const WEAPONTYPE = {
   MACE: 0,
   SWORD: 1,
   DAGGER: 2,
@@ -18,7 +19,7 @@ var WEAPONTYPE = {
 };
 
 export class Weapon {
-  constructor(player, item, enchant, tempenchant, offhand, twohand) {
+  constructor(player, item, enchant, tempenchant, offhand, twohand, buffs) {
     this.player = player;
     this.id = item.id;
     this.name = item.name;

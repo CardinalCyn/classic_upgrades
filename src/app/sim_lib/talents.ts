@@ -977,3 +977,18 @@ export const talents = [
     ],
   },
 ];
+
+export type Talent = {
+  i: number; // id
+  n: string; // name
+  m: number; // max points
+  c: number; // current points
+  x: number;
+  y: number;
+  // other properties as needed
+};
+
+export type TalentTreeItem = {
+  n: string; // tree name
+  t: Talent[];
+};

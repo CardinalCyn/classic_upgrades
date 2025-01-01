@@ -1,3 +1,9 @@
+import { buffs } from "../buffs";
+import { spells } from "../spells";
+import { DEFENSETYPE, RESULT, rng10k, SCHOOL } from "./simulation";
+
+var step = 0;
+
 export class Spell {
   constructor(player, id, name) {
     this.id = id;

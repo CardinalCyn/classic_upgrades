@@ -2,12 +2,8 @@ import { Buff } from "../sim_lib/buffs";
 import { Gear } from "../sim_lib/gear";
 import { Rune } from "../sim_lib/runes";
 import { Spell } from "../sim_lib/spells";
-import { equipmentStats, races } from "./constants";
-
-export type GearStat = {
-  statName: (typeof equipmentStats)[number]; // An array of stat names
-  statValue: number;
-};
+import { TalentTreeItem } from "../sim_lib/talents";
+import { races } from "./constants";
 
 export type GearSlotData = {
   slotName: string;
@@ -80,9 +76,9 @@ export type SettingsProps = {
 };
 
 export type TalentsProps = {
-  talentsSetup: { [key: string]: number };
+  talentsSetup: TalentTreeItem[];
   handleTalentPointUpdate: (
-    talentName: string,
+    talentToUpdateId: number,
     operation: "add" | "remove",
   ) => void;
   resetTalentPoints: () => void;
@@ -145,6 +141,20 @@ export type GetConfig = {
   mode: "classic" | "sod";
   playerConfig: PlayerConfig;
   targetConfig: TargetConfig;
-  talents: { [key: string]: number };
+  talents: TalentTreeItem[];
   gear: { [key: string]: Gear | null };
+  buffs: (Buff & { active: boolean })[];
+  spells: Spell[];
+};
+
+export type Report = {
+  endtime: number;
+  iterations: number;
+  maxdps: number;
+  mindps: number;
+  starttime: number;
+  sumdps: number;
+  sumdps2: number;
+  totaldmg: number;
+  totalduration: number;
 };
