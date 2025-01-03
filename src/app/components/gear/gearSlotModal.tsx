@@ -19,7 +19,6 @@ import Image from "next/image";
 import { GearSlotData } from "@/app/utils/types";
 import { imageDomain, WEB_DB_URL } from "@/app/utils/constants";
 import { gear, Gear } from "@/app/sim_lib/gear";
-import { gearSod } from "@/app/sim_lib/gear_sod";
 
 interface GearSelectModalProps {
   isOpen: boolean;

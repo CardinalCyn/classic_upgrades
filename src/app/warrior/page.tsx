@@ -26,11 +26,12 @@ import {
   SimulationConfig,
   SimulationStartParams,
   SimulationWorkerParallel,
-  TYPE,
 } from "../sim_lib/classes/simulation";
+import ErrorModal from "../components/errorModal";
 
 function Warrior(): React.JSX.Element {
   const [simulatedDPS, setSimulatedDPS] = useState(0);
+  const [simulatedDPSError, setSimulatedDpsError] = useState("0");
   const { classicMode, setClassicMode } = useContext(ClassicModeContext);
 
   const [rotationSetup, setRotationSetup] = useState<Spell[]>(
@@ -260,10 +261,48 @@ function Warrior(): React.JSX.Element {
   }
 
   function simulateDps() {
-    const fullConfig = getFullConfig(); // Use the current state configuration
-    const player = new Player(fullConfig, undefined, undefined, undefined);
-    const stats = Object.keys(player.stats).length ? player.stats : player.base;
-    setCharacterStats(stats);
+    try {
+      const fullConfig = getFullConfig(); // Use the current state configuration
+      const player = new Player(fullConfig, undefined, undefined, undefined);
+      if (!player.mh) throw { message: "No Mainhand Weapon Selected" };
+      const stats = Object.keys(player.stats).length
+        ? player.stats
+        : player.base;
+      setCharacterStats(stats);
+      const s = new Simulation(
+        player,
+        (report) => {
+          // Finished
+          console.log("report");
+          console.log(report);
+          report.player = player.serializeStats();
+          report.spread = s.spread;
+          const mean = report.totaldmg / report.totalduration;
+          setSimulatedDPS(mean);
+          const s1 = report.sumdps,
+            s2 = report.sumdps2,
+            n = report.iterations;
+          const varmean = (s2 - (s1 * s1) / n) / (n - 1) / n;
+          const error = 1.97 * Math.sqrt(varmean);
+          setSimulatedDpsError(error.toFixed(2));
+          console.log("time: " + (report.endtime - report.starttime) / 1000);
+        },
+        () => {},
+        getSimulationConfig(),
+      );
+      s.startSync();
+    } catch (err) {
+      const errMessage =
+        err instanceof Error
+          ? err.message
+          : typeof err === "object" && err && "message" in err
+          ? (err as { message: string }).message
+          : JSON.stringify(err);
+
+      setErrorMessage(errMessage);
+      setIsErrorModalOpen(true);
+    }
+
     // const MAX_WORKERS = ~~Math.min(8, (navigator.hardwareConcurrency || 8) / 2);
     // const sim = new SimulationWorkerParallel(
     //   MAX_WORKERS,
@@ -319,23 +358,6 @@ function Warrior(): React.JSX.Element {
     // console.log("starting sim page.tsx");
     // console.log(sim);
     // sim.start(params);
-
-    const s = new Simulation(
-      player,
-      (report) => {
-        // Finished
-        console.log("report");
-        console.log(report);
-        report.player = player.serializeStats();
-        report.spread = s.spread;
-        console.log(report);
-      },
-      (iteration, report) => {
-        // Update
-      },
-      getSimulationConfig(),
-    );
-    s.startSync();
   }
 
   const [characterStats, setCharacterStats] = useState<Base>(() => {
@@ -344,16 +366,26 @@ function Warrior(): React.JSX.Element {
     return Object.keys(player.stats).length ? player.stats : player.base;
   });
 
+  const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
   return (
     <div className="h-screen">
       <Navbar classicMode={classicMode} setClassicMode={setClassicMode} />
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 pt-16 w-full h-screen ">
         <div className="w-full bg-primary-foreground">
           <Card className=" border-none rounded-none w-full bg-primary-foreground">
+            <ErrorModal
+              errorMessage={errorMessage}
+              isOpen={isErrorModalOpen}
+              onClose={() => setIsErrorModalOpen(false)}
+            />
             <CardContent className="space-y-2 pt-6 flex flex-col items-center w-full rounded-none">
               <Button onClick={simulateDps}>Simulate</Button>
               <div className="flex items-center space-x-2">
-                <span>{simulatedDPS} DPS(±)150</span>
+                <span>
+                  {simulatedDPS.toFixed(2)} DPS(±){simulatedDPSError}
+                </span>
               </div>
             </CardContent>
           </Card>
