@@ -1,6 +1,6 @@
 import { buffs } from "../buffs";
 import { spells } from "../spells";
-import { DEFENSETYPE, RESULT, rng10k, SCHOOL } from "./simulation";
+import { DEFENSETYPE, RESULT, rng10k, SCHOOL, rng } from "./simulation";
 
 var step = 0;
 

@@ -22,9 +22,11 @@ import { Base, Player } from "../sim_lib/classes/player";
 import { GetConfig, Report } from "../utils/types";
 import { Talent, talents, TalentTreeItem } from "../sim_lib/talents";
 import {
+  Simulation,
   SimulationConfig,
   SimulationStartParams,
   SimulationWorkerParallel,
+  TYPE,
 } from "../sim_lib/classes/simulation";
 
 function Warrior(): React.JSX.Element {
@@ -262,61 +264,78 @@ function Warrior(): React.JSX.Element {
     const player = new Player(fullConfig, undefined, undefined, undefined);
     const stats = Object.keys(player.stats).length ? player.stats : player.base;
     setCharacterStats(stats);
-    const MAX_WORKERS = ~~Math.min(8, (navigator.hardwareConcurrency || 8) / 2);
-    const sim = new SimulationWorkerParallel(
-      MAX_WORKERS,
-      (report: Report) => {
+    // const MAX_WORKERS = ~~Math.min(8, (navigator.hardwareConcurrency || 8) / 2);
+    // const sim = new SimulationWorkerParallel(
+    //   MAX_WORKERS,
+    //   (report: Report) => {
+    //     console.log(report);
+    //     const mean = report.totaldmg / report.totalduration;
+    //     setSimulatedDPS(mean);
+    //     const s1 = report.sumdps,
+    //       s2 = report.sumdps2,
+    //       n = report.iterations;
+    //     const varmean = (s2 - (s1 * s1) / n) / (n - 1) / n;
+    //     const err = (1.96 * Math.sqrt(varmean)).toFixed(2);
+    //     const time = (report.endtime - report.starttime) / 1000;
+    //     const mindps = report.mindps.toFixed(2);
+    //     const maxdps = report.maxdps.toFixed(2);
+    //     const res = {
+    //       mean,
+    //       err,
+    //       time,
+    //       mindps,
+    //       maxdps,
+    //     };
+    //     console.log(res);
+    //   },
+    //   (iteration: number, report: Report) => {
+    //     const perc = parseInt(
+    //       (Number(iteration / report.iterations) * 100).toString(),
+    //     );
+    //     console.log(perc);
+    //   },
+    //   (error: unknown) => {
+    //     console.error(error);
+    //   },
+    // );
+    // const params: SimulationStartParams = {
+    //   sim: getSimulationConfig(),
+    //   fullReport: true,
+    //   player: [
+    //     undefined,
+    //     undefined,
+    //     undefined,
+    //     { ...getPlayerConfig(settingsSetup), target: player.target },
+    //   ],
+    //   globals: {
+    //     buffs: buffsSetup.map((buff) => buff.id),
+    //     enchant: {},
+    //     rotation: rotationSetup,
+    //     runes: {},
+    //     sod: classicMode === "Season of Discovery",
+    //     talents: talentsSetup,
+    //   },
+    // };
+    // console.log("starting sim page.tsx");
+    // console.log(sim);
+    // sim.start(params);
+
+    const s = new Simulation(
+      player,
+      (report) => {
+        // Finished
+        console.log("report");
         console.log(report);
-        const mean = report.totaldmg / report.totalduration;
-        setSimulatedDPS(mean);
-        const s1 = report.sumdps,
-          s2 = report.sumdps2,
-          n = report.iterations;
-        const varmean = (s2 - (s1 * s1) / n) / (n - 1) / n;
-        const err = (1.96 * Math.sqrt(varmean)).toFixed(2);
-        const time = (report.endtime - report.starttime) / 1000;
-        const mindps = report.mindps.toFixed(2);
-        const maxdps = report.maxdps.toFixed(2);
-        const res = {
-          mean,
-          err,
-          time,
-          mindps,
-          maxdps,
-        };
-        console.log(res);
+        report.player = player.serializeStats();
+        report.spread = s.spread;
+        console.log(report);
       },
-      (iteration: number, report: Report) => {
-        const perc = parseInt(
-          (Number(iteration / report.iterations) * 100).toString(),
-        );
-        console.log(perc);
+      (iteration, report) => {
+        // Update
       },
-      (error: unknown) => {
-        console.error(error);
-      },
+      getSimulationConfig(),
     );
-    const params: SimulationStartParams = {
-      sim: getSimulationConfig(),
-      fullReport: true,
-      player: [
-        undefined,
-        undefined,
-        undefined,
-        { ...getPlayerConfig(settingsSetup), target: player.target },
-      ],
-      globals: {
-        buffs: buffsSetup.map((buff) => buff.id),
-        enchant: {},
-        rotation: rotationSetup,
-        runes: {},
-        sod: classicMode === "Season of Discovery",
-        talents: talentsSetup,
-      },
-    };
-    console.log("starting sim page.tsx");
-    console.log(sim);
-    sim.start(params);
+    s.startSync();
   }
 
   const [characterStats, setCharacterStats] = useState<Base>(() => {

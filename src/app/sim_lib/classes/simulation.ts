@@ -2,6 +2,14 @@ import { PlayerConfig, Report, TargetConfig } from "@/app/utils/types";
 import { Player } from "./player";
 import { Spell } from "../spells";
 import { TalentTreeItem } from "../talents";
+import { sanitizeSimulationParams } from "@/app/utils/sim";
+import {
+  BlademasterFury,
+  Shockwave,
+  Slam,
+  ThunderClap,
+  Whirlwind,
+} from "./spell";
 
 export const RESULT = {
   HIT: 0,
@@ -75,7 +83,7 @@ class SimulationWorker {
   }
 
   start(params: SimulationStartParams) {
-    this.worker.postMessage(params);
+    this.worker.postMessage(sanitizeSimulationParams(params));
   }
 }
 
