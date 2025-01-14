@@ -55,8 +55,7 @@ class SimulationWorker {
     callback_error: (err: unknown) => void,
   ) {
     this.worker = new Worker("./sim-worker.min.js");
-    console.log("this worker");
-    console.log(this.worker);
+
     this.worker.onerror = (...args) => {
       callback_error(...args);
       this.worker.terminate();

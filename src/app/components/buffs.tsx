@@ -34,7 +34,7 @@ function Buffs({
   const [targetArmor, setTargetArmor] = useState(initTargetArmor);
   useEffect(() => {
     let armor = initTargetArmor;
-    let improvedExposedArmorActive = buffsSetup.some(
+    const improvedExposedArmorActive = buffsSetup.some(
       (buff) => buff.id === improvedExposedArmorId && buff.active,
     );
 
@@ -50,7 +50,7 @@ function Buffs({
     }
 
     setTargetArmor(Math.max(armor, 0));
-  }, [buffsSetup, setTargetArmor]);
+  }, [buffsSetup, setTargetArmor, initTargetArmor]);
 
   const buffSections = [
     {
@@ -136,7 +136,7 @@ function Buffs({
 
   function aqBooksFilter(buff: Buff): boolean {
     if (!buff.aq && buff.aq !== false) return true;
-    return buff.aq === settingsSetup.aqbooks.checkbox;
+    return buff.aq === settingsSetup.aqbooks;
   }
 
   return (

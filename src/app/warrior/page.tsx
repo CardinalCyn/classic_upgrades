@@ -19,14 +19,9 @@ import { Gear } from "../sim_lib/gear";
 import { Rune, runes } from "../sim_lib/runes";
 import { gearSlotData, runeSlotData } from "../utils/constants";
 import { Base, Player } from "../sim_lib/classes/player";
-import { GetConfig, Report } from "../utils/types";
+import { GetConfig } from "../utils/types";
 import { Talent, talents, TalentTreeItem } from "../sim_lib/talents";
-import {
-  Simulation,
-  SimulationConfig,
-  SimulationStartParams,
-  SimulationWorkerParallel,
-} from "../sim_lib/classes/simulation";
+import { Simulation, SimulationConfig } from "../sim_lib/classes/simulation";
 import ErrorModal from "../components/errorModal";
 
 function Warrior(): React.JSX.Element {
@@ -301,6 +296,7 @@ function Warrior(): React.JSX.Element {
 
       setErrorMessage(errMessage);
       setIsErrorModalOpen(true);
+      throw err;
     }
 
     // const MAX_WORKERS = ~~Math.min(8, (navigator.hardwareConcurrency || 8) / 2);

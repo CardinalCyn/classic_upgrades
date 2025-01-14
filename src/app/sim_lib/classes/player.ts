@@ -822,15 +822,12 @@ export class Player {
         if (!spell.aura && this.mh.type == WEAPONTYPE.FISHINGPOLE) continue;
         if (spell.item && !this.items.includes(spell.id)) continue;
         if (spell.aura) {
-          console.log(spell.aura);
-          this.auras[spell.classname.toLowerCase()] = eval(
-            `new ${spell.classname}(this, ${spell.id})`,
+          this.auras[spell.classname.toLowerCase()] = createSpell(
+            spell.classname,
+            this,
+            spell.id,
           );
         } else {
-          console.log("spell");
-          console.log(spell.classname);
-          console.log(createSpell(spell.classname, this, spell.id));
-
           this.spells[spell.classname.toLowerCase()] = createSpell(
             spell.classname,
             this,

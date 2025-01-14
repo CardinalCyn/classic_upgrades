@@ -56,8 +56,10 @@ class LazySpellRegistry {
         .filter(([_, value]) => {
           return (
             typeof value === "function" &&
-            value.prototype instanceof SpellModules.Spell &&
-            value !== SpellModules.Spell
+            ((value.prototype instanceof SpellModules.Spell &&
+              value !== SpellModules.Spell) ||
+              (value.prototype instanceof SpellModules.Aura &&
+                value !== SpellModules.Aura))
           );
         })
         .reduce(
