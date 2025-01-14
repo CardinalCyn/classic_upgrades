@@ -163,7 +163,7 @@ export class Weapon {
     if (heroicstrike) dmg += heroicstrike.bonus;
     if (
       heroicstrike &&
-      heroicstrike instanceof HeroicStrike &&
+      heroicstrike instanceof Classes.HeroicStrike &&
       this.player.heroicbonus
     )
       mod = 1.25;

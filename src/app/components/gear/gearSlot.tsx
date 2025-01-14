@@ -45,15 +45,16 @@ export function GearSlot({
                   : `/images/gearSlotIcons/${gearSlot.imageName}`
               }
               alt={`${gearSlot.slotName} icon`}
-              width={56}
-              height={56}
-              className="object-contain min-w-[56px] min-h-[56px] w-14 h-14"
+              width={30}
+              height={30}
+              className="object-contain min-w-[30px] min-h-[30px] w-14 h-14"
               onClick={(e) => e.preventDefault()}
             />
           </a>
         </div>
-        <div className="flex flex-col">
+        <div className="flex flex-col text-sm">
           <span>{selectedGear ? selectedGear.name : gearSlot.slotName}</span>
+          <span>No enchant</span>
         </div>
       </div>
 

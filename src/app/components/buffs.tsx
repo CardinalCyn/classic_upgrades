@@ -1,14 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Buff,
   buffs,
@@ -20,13 +13,14 @@ import {
 import BuffIcon from "./buffIcon";
 import { BuffsProps } from "../utils/types";
 import { gladiatorStanceId } from "../utils/constants";
+import CustomizeButtons from "./customizeButtons";
 
 function Buffs({
   classicMode,
   playerLevel,
   initTargetArmor,
   buffsSetup,
-  resetBuffs,
+  buttonFunctions,
   handleBuffUpdate: handleBuffUpdate,
   settingsSetup,
   runesSetup,
@@ -143,10 +137,10 @@ function Buffs({
     <Card className="border-none rounded-none shadow-none text-2xl font-bold mb-6 text-center flex flex-col items-center">
       <CardHeader>
         <CardTitle>Buffs</CardTitle>
-        <CardDescription className="pt-5 flex gap-4">
-          <Button onClick={resetBuffs}>Reset Buffs</Button>
-          <Button>Save Buffs</Button>
-        </CardDescription>
+        <CustomizeButtons
+          sectionName="Buffs"
+          buttonFunctions={buttonFunctions}
+        />
       </CardHeader>
       <CardContent className="md:mx-32">
         {buffSections.map(({ title, filter }, index) => (

@@ -1,21 +1,19 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { runeSlotData } from "../utils/constants";
 import RuneIcon from "./runeIcon";
 import { RunesProps } from "../utils/types";
+import CustomizeButtons from "./customizeButtons";
 
-function Runes({ runesSetup, handleRunesUpdate, resetRunes }: RunesProps) {
+function Runes({ runesSetup, handleRunesUpdate, buttonFunctions }: RunesProps) {
   return (
     <Card className="border-none rounded-none shadow-none w-full max-w-4xl">
       <CardHeader>
         <CardTitle className="text-center">Warrior Runes</CardTitle>
-        <div className="flex flex-col justify-between items-center">
-          <div className="flex gap-2">
-            <Button onClick={resetRunes}>Reset Runes</Button>
-            <Button>Save Runes</Button>
-          </div>
-        </div>
+        <CustomizeButtons
+          sectionName="Runes"
+          buttonFunctions={buttonFunctions}
+        />
       </CardHeader>
       <CardContent>
         <div className={`grid grid-cols-1 gap-2`}>

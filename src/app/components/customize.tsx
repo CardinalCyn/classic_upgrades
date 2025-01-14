@@ -58,20 +58,20 @@ function Customize({
         <GearSelection
           gearSetup={gearSelectionProps.gearSetup}
           handleGearUpdate={gearSelectionProps.handleGearUpdate}
-          resetGear={gearSelectionProps.resetGear}
+          buttonFunctions={gearSelectionProps.buttonFunctions}
         />
       </TabsContent>
       <TabsContent className="border-none" value="settings">
         <Settings
           settingsSetup={settingsProps.settingsSetup}
           handleSettingsUpdate={settingsProps.handleSettingsUpdate}
+          buttonFunctions={settingsProps.buttonFunctions}
         />
       </TabsContent>
       <TabsContent className="border-none" value="talents">
         <Talents
           handleTalentPointUpdate={talentSelectionProps.handleTalentPointUpdate}
-          resetTalentPoints={talentSelectionProps.resetTalentPoints}
-          talentPointsRemaining={talentSelectionProps.talentPointsRemaining}
+          buttonFunctions={talentSelectionProps.buttonFunctions}
           talentsSetup={talentSelectionProps.talentsSetup}
         />
       </TabsContent>
@@ -82,7 +82,7 @@ function Customize({
           settingsSetup={rotationProps.settingsSetup}
           rotationSetup={rotationProps.rotationSetup}
           handleRotationUpdate={rotationProps.handleRotationUpdate}
-          resetRotation={rotationProps.resetRotation}
+          buttonFunctions={rotationProps.buttonFunctions}
           runesSetup={rotationProps.runesSetup}
           gearSetup={gearSelectionProps.gearSetup}
         />
@@ -97,7 +97,7 @@ function Customize({
           }
           settingsSetup={settingsProps.settingsSetup}
           buffsSetup={buffsProps.buffsSetup}
-          resetBuffs={buffsProps.resetBuffs}
+          buttonFunctions={buffsProps.buttonFunctions}
           handleBuffUpdate={buffsProps.handleBuffUpdate}
           runesSetup={runesProps.runesSetup}
         />
@@ -106,7 +106,7 @@ function Customize({
         <TabsContent className="border-none" value="runes">
           <Runes
             runesSetup={runesProps.runesSetup}
-            resetRunes={runesProps.resetRunes}
+            buttonFunctions={runesProps.buttonFunctions}
             handleRunesUpdate={runesProps.handleRunesUpdate}
           />
         </TabsContent>

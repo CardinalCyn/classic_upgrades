@@ -14,8 +14,13 @@ import { settingsFields } from "../utils/constants";
 import { SettingsField, SettingsProps } from "../utils/types";
 import CustomDropdown from "./ui/custom-dropdown";
 import CustomSlider from "./ui/custom-slider";
+import CustomizeButtons from "./customizeButtons";
 
-function Settings({ settingsSetup, handleSettingsUpdate }: SettingsProps) {
+function Settings({
+  settingsSetup,
+  handleSettingsUpdate,
+  buttonFunctions,
+}: SettingsProps) {
   function renderField(settingsField: SettingsField): React.JSX.Element {
     const currentValue = settingsSetup[settingsField.id];
     switch (settingsField.fieldType) {
@@ -77,9 +82,10 @@ function Settings({ settingsSetup, handleSettingsUpdate }: SettingsProps) {
     <Card className="border-none rounded-none shadow-none text-2xl font-bold mb-6 text-center flex flex-col items-center">
       <CardHeader>
         <CardTitle>Settings</CardTitle>
-        <CardDescription className="pt-5">
-          <Button>Save Settings</Button>
-        </CardDescription>
+        <CustomizeButtons
+          sectionName="Settings"
+          buttonFunctions={buttonFunctions}
+        />
       </CardHeader>
       <CardContent className="grid grid-cols-1 md:grid-cols-2 text-left text-sm gap-x-20 gap-y-2 align-middle w-full">
         {settingsFields.map((settingsField) => {

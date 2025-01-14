@@ -261,6 +261,8 @@ export class Simulation {
   //     batching: parseInt($('select[name="batching"]').val()),
   //   };
   // }
+  player: Player;
+  spread: any;
   constructor(
     player: Player,
     callback_finished: (report: any) => void,

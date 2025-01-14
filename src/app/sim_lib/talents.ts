@@ -985,6 +985,8 @@ export type Talent = {
   c: number; // current points
   x: number;
   y: number;
+
+  aura: (count: number) => { [key: string]: number };
   // other properties as needed
 };
 

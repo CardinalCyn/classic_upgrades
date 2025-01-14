@@ -60,7 +60,7 @@ export type Race = (typeof races)[number];
 export type GearSelectionProps = {
   gearSetup: { [key: string]: Gear | null };
   handleGearUpdate: (slotName: string, gearPiece: Gear) => void;
-  resetGear: () => void;
+  buttonFunctions: ButtonFunctions;
 };
 
 type SettingsSetup = {
@@ -73,16 +73,16 @@ export type SettingsProps = {
     settingName: string,
     val: boolean | number | string,
   ) => void;
+  buttonFunctions: ButtonFunctions;
 };
 
 export type TalentsProps = {
-  talentsSetup: TalentTreeItem[];
+  talentsSetup: { talents: TalentTreeItem[]; talentPointsRemaining: number };
   handleTalentPointUpdate: (
     talentToUpdateId: number,
     operation: "add" | "remove",
   ) => void;
-  resetTalentPoints: () => void;
-  talentPointsRemaining: number;
+  buttonFunctions: ButtonFunctions;
 };
 
 export type RotationProps = {
@@ -91,7 +91,7 @@ export type RotationProps = {
   settingsSetup: SettingsSetup;
   rotationSetup: Spell[];
   handleRotationUpdate: (spellId: number, updates: Partial<Spell>) => void;
-  resetRotation: () => void;
+  buttonFunctions: ButtonFunctions;
   runesSetup: { [key: string]: (Rune & { active: boolean })[] };
   gearSetup: { [key: string]: Gear | null };
 };
@@ -101,10 +101,16 @@ export type BuffsProps = {
   playerLevel: number;
   initTargetArmor: number;
   buffsSetup: (Buff & { active: boolean })[];
-  resetBuffs: () => void;
+  buttonFunctions: ButtonFunctions;
   handleBuffUpdate: (buffId: number, toggle: boolean) => void;
   settingsSetup: SettingsSetup;
   runesSetup: { [key: string]: (Rune & { active: boolean })[] };
+};
+
+export type ButtonFunctions = {
+  clear: () => void;
+  reset: () => void;
+  save: () => void;
 };
 
 export type RunesProps = {
@@ -114,7 +120,7 @@ export type RunesProps = {
     toggle: boolean,
     runeSlotName: string,
   ) => void;
-  resetRunes: () => void;
+  buttonFunctions: ButtonFunctions;
 };
 
 export type TargetConfig = {

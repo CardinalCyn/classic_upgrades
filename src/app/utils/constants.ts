@@ -1,4 +1,8 @@
-import { RuneSlot } from "../sim_lib/runes";
+import { Buff, buffs } from "../sim_lib/buffs";
+import { Gear } from "../sim_lib/gear";
+import { Rune, runes, RuneSlot } from "../sim_lib/runes";
+import { Spell, spells } from "../sim_lib/spells";
+import { talents, TalentTreeItem } from "../sim_lib/talents";
 import {
   ClassicMode,
   GearSlotData,
@@ -7,6 +11,8 @@ import {
   SettingsField,
   TargetConfig,
 } from "./types";
+
+export const defaultTalentPointsRemaining = 51;
 
 export const gearSlotData: GearSlotData[] = [
   { slotName: "Head", imageName: "Head.jpg", gearJsSlotName: "head" },
@@ -424,3 +430,91 @@ export const getTargetConfig = (settingsSetup: {
     speed: settingsSetup.targetspeed as number,
   };
 };
+
+// Define the exact mapping of keys to their return types
+export type SetupConfig = {
+  rotation: Spell[];
+  gear: {
+    [key: string]: Gear | null;
+  };
+  runes: { [key: string]: (Rune & { active: boolean })[] };
+  settings: { [settingsFieldName: string]: boolean | number | string };
+  talents: { talents: TalentTreeItem[]; talentPointsRemaining: number };
+  buffs: (Buff & { active: boolean })[];
+};
+
+export function getClearedSetup(keyName: "rotation"): Spell[];
+export function getClearedSetup(keyName: "gear"): {
+  [key: string]: Gear | null;
+};
+export function getClearedSetup(keyName: "runes"): {
+  [key: string]: (Rune & { active: boolean })[];
+};
+export function getClearedSetup(keyName: "settings"): {
+  [settingsFieldName: string]: boolean | number | string;
+};
+export function getClearedSetup(
+  keyName: "talents",
+  talentPointsRemaining: number,
+): {
+  talents: TalentTreeItem[];
+  talentPointsRemaining: number;
+};
+export function getClearedSetup(
+  keyName: "buffs",
+): (Buff & { active: boolean })[];
+
+export function getClearedSetup(
+  keyName: keyof SetupConfig,
+  talentPointsRemaining?: number,
+): SetupConfig[keyof SetupConfig] {
+  try {
+    switch (keyName) {
+      case "rotation":
+        return spells.map((spell) => {
+          return { ...spell, active: false } as Spell;
+        });
+      case "gear":
+        return gearSlotData.reduce((acc, gearSlot) => {
+          acc[gearSlot.gearJsSlotName] = null;
+          return acc;
+        }, {} as { [key: string]: Gear | null });
+      case "runes":
+        return runeSlotData.reduce((acc, runeSlotName) => {
+          const mappedRunes: (Rune & { active: boolean })[] = runes[
+            runeSlotName
+          ].map((rune: Rune) => {
+            return { ...rune, active: false };
+          });
+          acc[runeSlotName] = mappedRunes;
+          return acc;
+        }, {} as { [key: string]: (Rune & { active: boolean })[] });
+      case "settings":
+        return settingsFields.reduce((acc, settingsField) => {
+          switch (settingsField.fieldType) {
+            case "dropdown":
+              acc[settingsField.id] = settingsField.defaultDropdownValue;
+              break;
+            default:
+              acc[settingsField.id] = settingsField.defaultValue;
+          }
+          return acc;
+        }, {} as { [key: string]: boolean | number | string });
+      case "talents":
+        return {
+          talents: talents.map((tree) => ({
+            ...tree,
+            t: tree.t.map((talent) => ({ ...talent, c: 0 })),
+          })),
+          talentPointsRemaining:
+            talentPointsRemaining || defaultTalentPointsRemaining,
+        };
+      case "buffs":
+        return buffs.map((buff) => ({ ...buff, active: false }));
+      default:
+        throw "Key name not found";
+    }
+  } catch (err) {
+    throw err;
+  }
+}

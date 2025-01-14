@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Spell } from "../sim_lib/spells";
 import { RotationProps } from "../utils/types";
 import RotationIcon from "./rotationIcon";
+import CustomizeButtons from "./customizeButtons";
 
 function Rotation({
   rotationSetup,
   handleRotationUpdate,
-  resetRotation,
+  buttonFunctions,
   classicMode,
   playerLevel,
   settingsSetup,
@@ -49,7 +50,7 @@ function Rotation({
 
   function aqBooksFilter(spell: Spell): boolean {
     if (!spell.aq && spell.aq !== false) return true;
-    return spell.aq === settingsSetup.aqbooks.checkbox;
+    return spell.aq === settingsSetup.aqbooks;
   }
 
   function runesFilter(spell: Spell): boolean {
@@ -78,13 +79,11 @@ function Rotation({
   return (
     <Card className="border-none rounded-none shadow-none text-2xl font-bold mb-6 text-center flex flex-col items-center">
       <CardHeader>
-        <CardTitle className="text-center">Gear</CardTitle>
-        <div className="flex flex-col justify-between items-center">
-          <div className="flex gap-2">
-            <Button onClick={resetRotation}>Reset Gear</Button>
-            <Button>Save Gear</Button>
-          </div>
-        </div>
+        <CardTitle className="text-center">Rotation</CardTitle>
+        <CustomizeButtons
+          sectionName="Rotation"
+          buttonFunctions={buttonFunctions}
+        />
       </CardHeader>
       <CardContent className="md:mx-32">
         {spellSections.map(({ title, filter }, index) => {
