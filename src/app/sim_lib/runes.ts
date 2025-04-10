@@ -1,4 +1,4 @@
-export const runes = {
+const originalRunes = {
   chest: [
     {
       id: 402877,
@@ -221,6 +221,13 @@ export const runes = {
     },
   ],
 };
+
+export const runes = Object.fromEntries(
+  Object.entries(originalRunes).map(([slotName, items]) => [
+    slotName,
+    items.map((item) => ({ ...item, selected: false })),
+  ]),
+);
 
 export type Rune = (typeof runes)[keyof typeof runes][number];
 export type RuneSlot = keyof typeof runes;

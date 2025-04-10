@@ -1,14 +1,22 @@
 import { Buff, buffs } from "../sim_lib/buffs";
+import { Enchant } from "../sim_lib/enchants";
 import { Gear } from "../sim_lib/gear";
 import { Rune, runes, RuneSlot } from "../sim_lib/runes";
-import { Spell, spells } from "../sim_lib/spells";
+import { WarrSpell, spells } from "../sim_lib/spells";
 import { talents, TalentTreeItem } from "../sim_lib/talents";
 import {
+  BuffsSetup,
   ClassicMode,
+  EnchantSetup,
+  GearSetup,
   GearSlotData,
   PlayerConfig,
   Race,
+  RotationSetup,
+  RunesSetup,
   SettingsField,
+  SettingsSetup,
+  TalentsSetup,
   TargetConfig,
 } from "./types";
 
@@ -391,6 +399,7 @@ export const tabs: {
   { tabValue: "rotation", tabLabel: "Rotation", classicMode: "Classic" },
   { tabValue: "buffs", tabLabel: "Buffs", classicMode: "Classic" },
   { tabValue: "runes", tabLabel: "Runes", classicMode: "Season of Discovery" },
+  { tabValue: "stats", tabLabel: "Stats", classicMode: "Classic" },
 ];
 
 export const defaultTargetBaseArmor = 3731;
@@ -433,37 +442,27 @@ export const getTargetConfig = (settingsSetup: {
 
 // Define the exact mapping of keys to their return types
 export type SetupConfig = {
-  rotation: Spell[];
-  gear: {
-    [key: string]: Gear | null;
-  };
-  runes: { [key: string]: (Rune & { active: boolean })[] };
-  settings: { [settingsFieldName: string]: boolean | number | string };
-  talents: { talents: TalentTreeItem[]; talentPointsRemaining: number };
-  buffs: (Buff & { active: boolean })[];
+  rotation: RotationSetup;
+  gear: GearSetup;
+  runes: RunesSetup;
+  settings: SettingsSetup;
+  talents: TalentsSetup;
+  buffs: BuffsSetup;
+  enchants: EnchantSetup;
 };
 
-export function getClearedSetup(keyName: "rotation"): Spell[];
-export function getClearedSetup(keyName: "gear"): {
-  [key: string]: Gear | null;
-};
-export function getClearedSetup(keyName: "runes"): {
-  [key: string]: (Rune & { active: boolean })[];
-};
+export function getClearedSetup(keyName: "rotation"): RotationSetup;
+export function getClearedSetup(keyName: "gear"): GearSetup;
+export function getClearedSetup(keyName: "runes"): RunesSetup;
 export function getClearedSetup(keyName: "settings"): {
   [settingsFieldName: string]: boolean | number | string;
 };
 export function getClearedSetup(
   keyName: "talents",
   talentPointsRemaining: number,
-): {
-  talents: TalentTreeItem[];
-  talentPointsRemaining: number;
-};
-export function getClearedSetup(
-  keyName: "buffs",
-): (Buff & { active: boolean })[];
-
+): TalentsSetup;
+export function getClearedSetup(keyName: "buffs"): BuffsSetup;
+export function getClearedSetup(keyName: "enchants"): EnchantSetup;
 export function getClearedSetup(
   keyName: keyof SetupConfig,
   talentPointsRemaining?: number,
@@ -472,13 +471,13 @@ export function getClearedSetup(
     switch (keyName) {
       case "rotation":
         return spells.map((spell) => {
-          return { ...spell, active: false } as Spell;
+          return { ...spell, active: false } as WarrSpell;
         });
       case "gear":
         return gearSlotData.reduce((acc, gearSlot) => {
           acc[gearSlot.gearJsSlotName] = null;
           return acc;
-        }, {} as { [key: string]: Gear | null });
+        }, {} as GearSetup);
       case "runes":
         return runeSlotData.reduce((acc, runeSlotName) => {
           const mappedRunes: (Rune & { active: boolean })[] = runes[
@@ -488,7 +487,7 @@ export function getClearedSetup(
           });
           acc[runeSlotName] = mappedRunes;
           return acc;
-        }, {} as { [key: string]: (Rune & { active: boolean })[] });
+        }, {} as RunesSetup);
       case "settings":
         return settingsFields.reduce((acc, settingsField) => {
           switch (settingsField.fieldType) {
@@ -499,7 +498,7 @@ export function getClearedSetup(
               acc[settingsField.id] = settingsField.defaultValue;
           }
           return acc;
-        }, {} as { [key: string]: boolean | number | string });
+        }, {} as SettingsSetup);
       case "talents":
         return {
           talents: talents.map((tree) => ({
@@ -511,6 +510,11 @@ export function getClearedSetup(
         };
       case "buffs":
         return buffs.map((buff) => ({ ...buff, active: false }));
+      case "enchants":
+        return gearSlotData.reduce((acc, gearSlot): EnchantSetup => {
+          acc[gearSlot.gearJsSlotName] = [null, null];
+          return acc;
+        }, {} as EnchantSetup);
       default:
         throw "Key name not found";
     }

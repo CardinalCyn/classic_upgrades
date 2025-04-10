@@ -3,7 +3,7 @@
 import Image from "next/image";
 import React, { useState } from "react";
 import { imageDomain, WEB_DB_URL } from "../utils/constants";
-import { Spell } from "../sim_lib/spells";
+import { WarrSpell } from "../sim_lib/spells";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -18,8 +18,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
 type BuffIconProps = {
-  spell: Spell;
-  handleRotationUpdate: (spellId: number, updates: Partial<Spell>) => void;
+  spell: WarrSpell;
+  handleRotationUpdate: (spellId: number, updates: Partial<WarrSpell>) => void;
   spellStatus: boolean;
 };
 
@@ -29,14 +29,14 @@ function RotationIcon({
   spellStatus,
 }: BuffIconProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [localSpell, setLocalSpell] = useState<Spell>({ ...spell });
+  const [localSpell, setLocalSpell] = useState<WarrSpell>({ ...spell });
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     setIsDialogOpen(true);
   };
 
-  const handleInputChange = (key: keyof Spell, value: any) => {
+  const handleInputChange = (key: keyof WarrSpell, value: boolean | string) => {
     setLocalSpell((prev) => ({ ...prev, [key]: value }));
   };
 

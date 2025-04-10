@@ -1,15 +1,24 @@
 import * as Classes from "./spell";
 
-import { GetConfig, Race, TargetConfig } from "@/app/utils/types";
+import {
+  BuffsSetup,
+  EnchantSetup,
+  GearSetup,
+  GetConfig,
+  Race,
+  RotationSetup,
+  TargetConfig,
+} from "@/app/utils/types";
 import { levelstats } from "../levelstats";
 import { Gear } from "../gear";
-import { enchant, sets } from "../enchants";
+import { Enchant, sets } from "../enchants";
 import { Weapon, WEAPONTYPE } from "./weapon";
 import { Buff } from "../buffs";
-import { Spell } from "../spells";
+import { WarrSpell } from "../spells";
 import { DEFENSETYPE, RESULT, rng10k, SCHOOL } from "./simulation";
 import { TalentTreeItem } from "../talents";
 import { createSpell } from "@/app/utils/sim";
+import { runes } from "../runes";
 
 export type Base = {
   ap: number;
@@ -67,9 +76,10 @@ type PlayerGetConfig = {
   spellqueueing: boolean;
   target: TargetConfig;
   talents: TalentTreeItem[];
-  gear: { [key: string]: Gear | null };
-  buffs: (Buff & { active: boolean })[];
-  spells: Spell[];
+  gear: GearSetup;
+  buffs: BuffsSetup;
+  spells: RotationSetup;
+  enchants: EnchantSetup;
 };
 
 export class Player {
@@ -80,6 +90,7 @@ export class Player {
       target: { ...props.targetConfig },
       talents: props.talents,
       gear: props.gear,
+      enchants: props.enchants,
       buffs: props.buffs,
       spells: props.spells,
     };
@@ -117,27 +128,40 @@ export class Player {
   timeworn: number;
   base: Base;
   stats: Base;
-  mh: null | Weapon;
+  mh: Weapon;
   oh: null | Weapon;
-  talents: TalentTreeItem[];
-  precisetiming: boolean;
+  talents: { [key: string]: number };
+  precisetiming: boolean | undefined;
   items: number[];
-  spells: { [key: string]: any };
-  preporder: Spell[];
-  stats: { [key: string]: any };
-  auras: { [key: string]: any };
+  spells: { [key: string]: Classes.Spell };
+  preporder: WarrSpell[];
+  auras: { [key: string]: Classes.Aura };
   basestance: string;
   config: PlayerGetConfig;
+  whirlwindcost: number | undefined;
+  bloodsurge: boolean | undefined;
+  testEnchType: undefined;
+  testEnch: undefined;
+  testTempEnch: number;
+  testTempEnchType: string;
+
   constructor(
     conf: GetConfig,
     testItem: undefined,
     testType: undefined,
     enchtype: undefined,
   ) {
+    this.testEnchType = undefined;
+    this.testEnch = undefined;
+    this.bloodsurge = undefined;
+    this.preporder = [];
+    this.precisetiming = undefined;
     const config = Player.getConfig(conf);
+    this.basestance = "";
     this.config = config;
     const talents = config.talents;
     const gear = config.gear;
+    const enchants = config.enchants;
     const buffs = config.buffs;
     const spells = config.spells;
     this.rage = 0;
@@ -147,6 +171,7 @@ export class Player {
       0.0091107836 * this.level * this.level +
       3.225598133 * this.level +
       4.2652911;
+    this.whirlwindcost = undefined;
     if (this.level == 25) this.rageconversion = 82.25;
     if (this.level == 40) this.rageconversion = 140.5;
     this.agipercrit = this.getAgiPerCrit(this.level);
@@ -164,7 +189,8 @@ export class Player {
     this.nextswingcl = false;
     this.freeslam = false;
     this.ragecostbonus = 0;
-    this.logging = config.logging;
+    this.logging = false;
+    //this.logging = config.logging;
     this.race = config.race;
     this.aqbooks = config.aqbooks;
     this.reactionmin = config.reactionmin;
@@ -248,25 +274,26 @@ export class Player {
     this.spells = {};
     this.items = [];
     this.addRace();
-    this.talents = talents;
+    this.talents = {};
     this.addTalents(talents);
-    this.addGear(buffs, gear);
+    this.addGear(buffs, gear, enchants);
     if (!this.mh) return;
     this.addSets();
-    this.addEnchants();
-    this.addTempEnchants();
+    this.addEnchants(enchants);
+    this.addTempEnchants(enchants);
     this.preAddRunes();
     this.addBuffs(buffs);
     this.addSpells(testItem, spells);
     this.sortSpells();
     this.addRunes();
     this.setSkills();
-    if (this.talents.flurry) this.auras.flurry = new Classes.Flurry(this);
+    if (this.talents.flurry)
+      this.auras.flurry = new Classes.Flurry(this, undefined);
     if (this.talents.deepwounds && this.mode !== "classic")
       this.auras.deepwounds =
         this.mode == "sod"
-          ? new Classes.DeepWounds(this)
-          : new Classes.OldDeepWounds(this);
+          ? new Classes.DeepWounds(this, undefined, undefined)
+          : new Classes.OldDeepWounds(this, undefined, undefined);
     if (this.adjacent && this.talents.deepwounds && this.mode !== "classic") {
       for (let i = 2; i <= this.adjacent + 1; i++)
         this.auras["deepwounds" + i] =
@@ -275,13 +302,16 @@ export class Player {
             : new Classes.OldDeepWounds(this, null, i);
     }
 
-    this.spells.stanceswitch = new Classes.StanceSwitch(this);
+    this.spells.stanceswitch = new Classes.StanceSwitch(this, undefined);
     if (this.spells.bloodrage)
-      this.auras.bloodrage = new Classes.BloodrageAura(this);
+      this.auras.bloodrage = new Classes.BloodrageAura(this, undefined);
     if (this.spells.berserkerrage)
-      this.auras.berserkerrage = new Classes.BerserkerRageAura(this);
+      this.auras.berserkerrage = new Classes.BerserkerRageAura(this, undefined);
     if (this.spells.shieldslam)
-      this.auras.defendersresolve = new Classes.DefendersResolve(this);
+      this.auras.defendersresolve = new Classes.DefendersResolve(
+        this,
+        undefined,
+      );
 
     if (
       (this.basestance == "def" || this.basestance == "glad") &&
@@ -294,8 +324,11 @@ export class Player {
     }
 
     if (this.items.includes(233490)) {
-      this.auras.obsidianstrength = new Classes.ObsidianStrength(this);
-      this.auras.obsidianhaste = new Classes.ObsidianHaste(this);
+      this.auras.obsidianstrength = new Classes.ObsidianStrength(
+        this,
+        undefined,
+      );
+      this.auras.obsidianhaste = new Classes.ObsidianHaste(this, undefined);
     }
 
     this.update();
@@ -304,10 +337,10 @@ export class Player {
   }
   initStances() {
     this.stance = this.basestance;
-    this.auras.battlestance = new Classes.BattleStance(this);
-    this.auras.berserkerstance = new Classes.BerserkerStance(this);
-    this.auras.defensivestance = new Classes.DefensiveStance(this);
-    this.auras.gladiatorstance = new Classes.GladiatorStance(this);
+    this.auras.battlestance = new Classes.BattleStance(this, undefined);
+    this.auras.berserkerstance = new Classes.BerserkerStance(this, undefined);
+    this.auras.defensivestance = new Classes.DefensiveStance(this, undefined);
+    this.auras.gladiatorstance = new Classes.GladiatorStance(this, undefined);
     if (this.basestance == "battle") this.auras.battlestance.timer = 1;
     if (this.basestance == "zerk") this.auras.berserkerstance.timer = 1;
     if (this.basestance == "def") this.auras.defensivestance.timer = 1;
@@ -335,7 +368,7 @@ export class Player {
 
       // race,class,level,str,agi,sta,inte,spi
       let stats = l.split(",");
-      if (stats[0] == raceid && stats[2] == this.level) {
+      if (stats[0] == raceid && stats[2] === this.level.toString()) {
         this.base.aprace = this.level * 3 - 20;
         this.base.ap += this.level * 3 - 20;
         this.base.str += parseInt(stats[3]);
@@ -356,10 +389,7 @@ export class Player {
     }
     if (this.talents.defense) this.base.defense += this.talents.defense;
   }
-  addGear(
-    buffs: (Buff & { active: boolean })[],
-    gear: { [key: string]: Gear | null },
-  ) {
+  addGear(buffs: BuffsSetup, gear: GearSetup, enchants: EnchantSetup) {
     for (let type in gear) {
       if (!gear[type]) continue;
       const item = gear[type];
@@ -391,9 +421,10 @@ export class Player {
       if (item.d) this.base.defense += item.d;
 
       if (type == "mainhand" || type == "offhand" || type == "twohand")
-        this.addWeapon(item, type, buffs);
+        this.addWeapon(item, type, buffs, enchants);
 
       if (
+        "proc" in item &&
         item.proc &&
         item.proc.chance &&
         (type == "trinket1" || type == "trinket2")
@@ -439,59 +470,66 @@ export class Player {
       if (item.id == 234147) this.base["moddmgdone"] += 4;
 
       if (item.id == 228122)
-        this.spells.themoltencore = new TheMoltenCore(this);
+        this.spells.themoltencore = new Classes.TheMoltenCore(this);
 
-      if (item.tw) this.timeworn++;
+      if ("tw" in item && item.tw) this.timeworn++;
 
       this.items.push(item.id);
     }
   }
-  addWeapon(item, type, buffs: (Buff & { active: boolean })[]) {
+  addWeapon(
+    item: Gear,
+    type: keyof typeof enchants,
+    buffs: BuffsSetup,
+    enchants: EnchantSetup,
+  ) {
     let ench, tempench;
     //FIXME: replace later
-    for (let item of enchant[type]) {
-      if (item.temp) continue;
+    for (let item of enchants[type]) {
+      if (!item || item.temp) continue;
       if (this.testEnchType == type && this.testEnch == item.id) ench = item;
-      else if (this.testEnchType != type && item.selected) ench = item;
+      else if (this.testEnchType != type) ench = item;
     }
-    for (let item of enchant[type]) {
-      if (!item.temp) continue;
+    for (let item of enchants[type]) {
+      if (!item || !item.temp) continue;
       if (this.testTempEnchType == type && this.testTempEnch == item.id)
         tempench = item;
-      else if (this.testTempEnchType != type && item.selected) tempench = item;
+      else if (this.testTempEnchType != type) tempench = item;
     }
 
     if (type == "mainhand")
       this.mh = new Weapon(this, item, ench, tempench, false, false, buffs);
 
-    if (type == "offhand" && item.type != "Shield")
+    if (type == "offhand" && ("type" in item && item.type) != "Shield")
       this.oh = new Weapon(this, item, ench, tempench, true, false, buffs);
 
-    if (type == "offhand" && item.type == "Shield") this.shield = item;
+    if (type == "offhand" && ("type" in item && item.type) == "Shield")
+      this.shield = item;
 
     if (type == "twohand")
       this.mh = new Weapon(this, item, ench, tempench, false, true, buffs);
   }
-  addEnchants() {
-    for (let type in enchant) {
-      for (let item of enchant[type]) {
-        if (item.temp) continue;
-        if (
-          (this.testEnchType == type && this.testEnch == item.id) ||
-          (this.testEnchType != type && item.selected)
-        ) {
-          for (let prop in this.base) {
-            if (prop == "haste") {
-              this.base.haste *= 1 + item.haste / 100 || 1;
+  addEnchants(enchants: EnchantSetup) {
+    for (let type in enchants) {
+      const item = enchants[type];
+      if (!item || ("temp" in item && item.temp)) continue;
+      if (
+        (this.testEnchType == type && this.testEnch == item.id) ||
+        this.testEnchType != type
+      ) {
+        for (let prop in this.base) {
+          if (prop == "haste") {
+            this.base.haste *= 1 + item.haste / 100 || 1;
+          } else {
+            const x = item[prop as keyof typeof item];
+
+            if (typeof item[prop as keyof typeof item] === "object") {
+              for (let subprop in item[prop]) {
+                this.base[prop][subprop] += item[prop][subprop] || 0;
+              }
             } else {
-              if (typeof item[prop] === "object") {
-                for (let subprop in item[prop]) {
-                  this.base[prop][subprop] += item[prop][subprop] || 0;
-                }
-              } else {
-                if (item[prop]) {
-                  this.base[prop] += item[prop] || 0;
-                }
+              if (item[prop]) {
+                this.base[prop] += item[prop] || 0;
               }
             }
           }
@@ -499,10 +537,10 @@ export class Player {
       }
     }
   }
-  addTempEnchants() {
-    for (let type in enchant) {
-      for (let item of enchant[type]) {
-        if (!item.temp) continue;
+  addTempEnchants(enchants: EnchantSetup) {
+    for (let type in enchants) {
+      for (let item of enchants[type as keyof typeof enchants]) {
+        if (!item || !item.temp) continue;
         if ((type == "mainhand" || type == "twohand") && this.mh.windfury)
           continue;
         if (
@@ -531,7 +569,7 @@ export class Player {
   preAddRunes() {
     if (typeof runes === "undefined") return;
     for (let type in runes) {
-      for (let item of runes[type]) {
+      for (let item of runes[type as keyof typeof runes]) {
         if (item.selected) {
           if (item.focusedrage) {
             this.ragecostbonus = 3;
@@ -546,57 +584,57 @@ export class Player {
   addRunes() {
     if (typeof runes === "undefined") return;
     for (let type in runes) {
-      for (let item of runes[type]) {
-        if (item.selected) {
+      for (let item of runes[type as keyof typeof runes]) {
+        if ("selected" in item && item.selected) {
           // Blood Frenzy
-          if (item.bloodfrenzy) {
+          if ("bloodfrenzy" in item && item.bloodfrenzy) {
             this.bloodfrenzy = item.bloodfrenzy;
           }
           // Endless Rage
-          if (item.ragemod) {
+          if ("ragemod" in item && item.ragemod) {
             this.base.ragemod = (this.base.ragemod || 1) * item.ragemod;
           }
           // Frenzied Assault
-          if (item.haste2h && this.mh.twohand) {
+          if ("haste2h" in item && item.haste2h && this.mh.twohand) {
             this.base.haste *= 1 + item.haste2h / 100 || 1;
             this.extrarage = 2;
             this.extracritrage = 4;
           }
-          if (item.furiousthunder) {
+          if ("dmgshield" in item && item.furiousthunder) {
             this.furiousthunder = item.furiousthunder;
           }
-          if (item.dmgdw && this.oh) {
+          if ("dmgdw" in item && item.dmgdw && this.oh) {
             this.base.dmgmod *= 1 + item.dmgdw / 100 || 1;
           }
-          if (item.devastate) {
+          if ("devastate" in item && item.furiousthunder) {
             this.devastate = item.devastate;
           }
-          if (item.bloodsurge) {
+          if ("bloodsurge" in item && item.bloodsurge) {
             this.bloodsurge = item.bloodsurge;
           }
-          if (item.swordboard) {
+          if ("swordboard" in item && item.swordboard) {
             this.swordboard = item.swordboard;
           }
-          if (item.wreckingcrew) {
+          if ("wreckingcrew" in item && item.wreckingcrew) {
             this.wreckingcrew = item.wreckingcrew;
-            this.auras.wreckingcrew = new WreckingCrew(this);
+            this.auras.wreckingcrew = new Classes.WreckingCrew(this);
           }
-          if (item.dmgshield && this.shield) {
+          if ("dmgshield" in item && item.dmgshield && this.shield) {
             this.base.dmgmod *= 1 + item.dmgshield / 100 || 1;
           }
-          if (item.tasteforblood) {
+          if ("tasteforblood" in item && item.tasteforblood) {
             this.tasteforblood = item.tasteforblood;
           }
-          if (item.freshmeat) {
+          if ("freshmeat" in item && item.freshmeat) {
             this.freshmeat = item.freshmeat;
-            this.auras.freshmeat = new FreshMeat(this);
+            this.auras.freshmeat = new Classes.FreshMeat(this);
           }
-          if (item.suddendeath) {
+          if ("suddendeath" in item && item.suddendeath) {
             this.suddendeath = item.suddendeath;
-            this.auras.suddendeath = new SuddenDeath(this);
+            this.auras.suddendeath = new Classes.SuddenDeath(this);
           }
-          if (item.singleminded) {
-            this.auras.singleminded = new SingleMinded(this);
+          if ("singleminded" in item && item.singleminded) {
+            this.auras.singleminded = new Classes.SingleMinded(this);
           }
         }
       }
@@ -648,16 +686,16 @@ export class Player {
           }
           if (bonus.stats.switchdelay) {
             this.switchdelay = bonus.stats.switchdelay;
-            this.auras.echoesbattle = new EchoesBattle(this);
-            this.auras.echoeszerk = new EchoesZerk(this);
-            this.auras.echoesglad = new EchoesGlad(this);
-            this.auras.echoesdef = new EchoesDef(this);
+            this.auras.echoesbattle = new Classes.EchoesBattle(this);
+            this.auras.echoeszerk = new Classes.EchoesZerk(this);
+            this.auras.echoesglad = new Classes.EchoesGlad(this);
+            this.auras.echoesdef = new Classes.EchoesDef(this);
           }
           if (bonus.stats.switchbonus) {
-            this.auras.battleforecast = new BattleForecast(this);
-            this.auras.zerkforecast = new ZerkForecast(this);
-            this.auras.defforecast = new DefForecast(this);
-            this.auras.gladforecast = new GladForecast(this);
+            this.auras.battleforecast = new Classes.BattleForecast(this);
+            this.auras.zerkforecast = new Classes.ZerkForecast(this);
+            this.auras.defforecast = new Classes.DefForecast(this);
+            this.auras.gladforecast = new Classes.GladForecast(this);
           }
           if (bonus.stats.overpowerrend)
             this.overpowerrend = bonus.stats.overpowerrend;
@@ -798,7 +836,7 @@ export class Player {
       this.timeworn = 0;
     }
   }
-  addSpells(testItem, spells: Spell[]) {
+  addSpells(testItem, spells: WarrSpell[]) {
     this.preporder = [];
     for (let spell of spells) {
       if (
@@ -2505,7 +2543,7 @@ export class Player {
     /* start-log */ if (this.logging)
       this.log(`Switched to ${stance} stance`); /* end-log */
   }
-  isValidStance(stance, isRend) {
+  isValidStance(stance: "battle" | "glad" | "def" | "zerk", isRend?: boolean) {
     return (
       this.stance == stance ||
       (this.stance == "glad" && this.shield) ||

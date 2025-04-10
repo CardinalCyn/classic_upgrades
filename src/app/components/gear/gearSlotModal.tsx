@@ -38,13 +38,10 @@ const GearSelectModal = ({
 
   const filteredGear = useMemo(() => {
     const gearSlotItems =
-      gear[gearSlot.gearJsSlotName as keyof typeof gear].map(
-        (gearPiece: any) => {
-          return { ...gearPiece, p: gearPiece.p || "" };
-        },
-      ) || [];
+      gear[gearSlot.gearJsSlotName as keyof typeof gear].map((gearPiece) => {
+        return { ...gearPiece, p: gearPiece.p || "" };
+      }) || [];
 
-    // Convert to array and filter by search query
     return gearSlotItems.filter(
       (gear) =>
         gear.p && gear.name.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -52,10 +49,7 @@ const GearSelectModal = ({
   }, [searchQuery, gearSlot.gearJsSlotName]);
 
   const handleSelectGear = useCallback(
-    (
-      gear: Gear & { p?: any },
-      e: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    ) => {
+    (gear: Gear, e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
       try {
         e.preventDefault();
         onSelectGear(gear);
@@ -99,7 +93,7 @@ const GearSelectModal = ({
           style={{ height: "calc(80vh - 200px)" }}
         >
           <div className="grid grid-cols-1 gap-2">
-            {filteredGear.map((gear, index) => {
+            {filteredGear.map((gear) => {
               if (!gear.p) return null;
               return (
                 <div

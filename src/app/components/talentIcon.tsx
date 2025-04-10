@@ -1,9 +1,10 @@
 import React from "react";
 import Image from "next/image";
 import { imageDomain, WEB_DB_URL } from "../utils/constants";
+import { Talent } from "../sim_lib/talents";
 
 type TalentIconProps = {
-  talent: any;
+  talent: Talent;
   currentCount: number;
   talentPointsRemaining: number;
   onAddPoint: () => void;
@@ -33,7 +34,7 @@ const TalentIcon = ({
 
   return (
     <a
-      key={talent.s}
+      key={talent.i}
       href={`${WEB_DB_URL}${"spell"}=${
         typeof talent.s === "object"
           ? talent.s[Math.max(0, Math.min(currentCount - 1, talent.m))]

@@ -978,19 +978,21 @@ export const talents = [
   },
 ];
 
-export type Talent = {
-  i: number; // id
-  n: string; // name
-  m: number; // max points
-  c: number; // current points
-  x: number;
-  y: number;
-
-  aura: (count: number) => { [key: string]: number };
-  // other properties as needed
-};
+export type Talent = (typeof talents)[number]["t"][number];
 
 export type TalentTreeItem = {
-  n: string; // tree name
+  n: string;
   t: Talent[];
 };
+
+// export type Talent = {
+//   i: number; // id
+//   n: string; // name
+//   m: number; // max points
+//   c: number; // current points
+//   x: number;
+//   y: number;
+
+//   aura: (count: number) => { [key: string]: number };
+//   // other properties as needed
+// };

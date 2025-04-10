@@ -15,90 +15,99 @@ import Navbar from "../components/navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ClassicModeContext } from "../providers/modeContext";
-import { Spell } from "../sim_lib/spells";
+import { WarrSpell } from "../sim_lib/spells";
 import { Buff, buffs } from "../sim_lib/buffs";
 import { Gear } from "../sim_lib/gear";
 import { Base, Player } from "../sim_lib/classes/player";
-import { GetConfig } from "../utils/types";
+import {
+  BuffsSetup,
+  EnchantSetup,
+  GearSetup,
+  GetConfig,
+  Report,
+  RotationSetup,
+  RunesSetup,
+  SettingsSetup,
+  TalentsSetup,
+} from "../utils/types";
 import { Talent, talents, TalentTreeItem } from "../sim_lib/talents";
 import { Simulation, SimulationConfig } from "../sim_lib/classes/simulation";
 import ErrorModal from "../components/errorModal";
 import { Rune } from "../sim_lib/runes";
+import { Enchant } from "../sim_lib/enchants";
+
+function getSavedSetup(keyName: "rotation"): RotationSetup;
+function getSavedSetup(keyName: "gear"): GearSetup;
+function getSavedSetup(keyName: "runes"): RunesSetup;
+function getSavedSetup(keyName: "settings"): SettingsSetup;
+function getSavedSetup(
+  keyName: "talents",
+  talentPointsRemaining: number,
+): TalentsSetup;
+function getSavedSetup(keyName: "buffs"): BuffsSetup;
+function getSavedSetup(keyName: "enchants"): EnchantSetup;
+function getSavedSetup(
+  keyName: keyof SetupConfig,
+  talentPointsRemaining?: number,
+): SetupConfig[keyof SetupConfig] {
+  try {
+    const savedSetup = localStorage.getItem(keyName);
+    if (savedSetup) {
+      const parsedSetup = JSON.parse(savedSetup);
+      if (keyName !== "talents") return parsedSetup;
+      const parsedTalentsSetup = parsedSetup as {
+        talents: TalentTreeItem[];
+        talentPointsRemaining: number;
+      };
+      for (
+        let talentTreeIndex = 0;
+        talentTreeIndex < talents.length;
+        talentTreeIndex++
+      ) {
+        for (
+          let talentIndex = 0;
+          talentIndex < parsedTalentsSetup.talents[talentTreeIndex].t.length;
+          talentIndex++
+        ) {
+          parsedTalentsSetup.talents[talentTreeIndex].t[talentIndex].aura =
+            talents[talentTreeIndex].t[talentIndex].aura;
+        }
+      }
+      return parsedTalentsSetup;
+    }
+    if (keyName === "talents" && talentPointsRemaining !== undefined) {
+      return getClearedSetup(keyName, talentPointsRemaining);
+    } else if (keyName === "talents") {
+      throw new Error("talentPointsRemaining is required for talents setup");
+    } else {
+      switch (keyName) {
+        case "rotation":
+          return getClearedSetup("rotation");
+        case "gear":
+          return getClearedSetup("gear");
+        case "runes":
+          return getClearedSetup("runes");
+        case "settings":
+          return getClearedSetup("settings");
+        case "buffs":
+          return getClearedSetup("buffs");
+        case "enchants":
+          return getClearedSetup("enchants");
+        default:
+          throw new Error(`Unexpected keyName: ${keyName}`);
+      }
+    }
+  } catch (err) {
+    throw err;
+  }
+}
 
 function Warrior(): React.JSX.Element {
   const [simulatedDPS, setSimulatedDPS] = useState(0);
   const [simulatedDPSError, setSimulatedDpsError] = useState("0");
   const { classicMode, setClassicMode } = useContext(ClassicModeContext);
 
-  function getSavedSetup(keyName: "rotation"): Spell[];
-  function getSavedSetup(keyName: "gear"): { [key: string]: Gear | null };
-  function getSavedSetup(keyName: "runes"): {
-    [key: string]: (Rune & { active: boolean })[];
-  };
-  function getSavedSetup(keyName: "settings"): {
-    [settingsFieldName: string]: boolean | number | string;
-  };
-  function getSavedSetup(
-    keyName: "talents",
-    talentPointsRemaining: number,
-  ): { talents: TalentTreeItem[]; talentPointsRemaining: number };
-  function getSavedSetup(keyName: "buffs"): (Buff & { active: boolean })[];
-  function getSavedSetup(
-    keyName: keyof SetupConfig,
-    talentPointsRemaining?: number,
-  ): SetupConfig[keyof SetupConfig] {
-    try {
-      const savedSetup = localStorage.getItem(keyName);
-      if (savedSetup) {
-        const parsedSetup = JSON.parse(savedSetup);
-        if (keyName !== "talents") return parsedSetup;
-        const parsedTalentsSetup = parsedSetup as {
-          talents: TalentTreeItem[];
-          talentPointsRemaining: number;
-        };
-
-        for (
-          let talentTreeIndex = 0;
-          talentTreeIndex < talents.length;
-          talentTreeIndex++
-        ) {
-          for (
-            let talentIndex = 0;
-            talentIndex < parsedTalentsSetup.talents[talentTreeIndex].t.length;
-            talentIndex++
-          ) {
-            parsedTalentsSetup.talents[talentTreeIndex].t[talentIndex].aura =
-              talents[talentTreeIndex].t[talentIndex].aura;
-          }
-        }
-        return parsedTalentsSetup;
-      }
-      if (keyName === "talents" && talentPointsRemaining !== undefined) {
-        return getClearedSetup(keyName, talentPointsRemaining);
-      } else if (keyName === "talents") {
-        throw new Error("talentPointsRemaining is required for talents setup");
-      } else {
-        switch (keyName) {
-          case "rotation":
-            return getClearedSetup("rotation");
-          case "gear":
-            return getClearedSetup("gear");
-          case "runes":
-            return getClearedSetup("runes");
-          case "settings":
-            return getClearedSetup("settings");
-          case "buffs":
-            return getClearedSetup("buffs");
-          default:
-            throw new Error(`Unexpected keyName: ${keyName}`);
-        }
-      }
-    } catch (err) {
-      throw err;
-    }
-  }
-
-  const [rotationSetup, setRotationSetup] = useState<Spell[]>([]);
+  const [rotationSetup, setRotationSetup] = useState<WarrSpell[]>([]);
 
   const resetRotation = useCallback(() => {
     return getSavedSetup("rotation");
@@ -106,11 +115,11 @@ function Warrior(): React.JSX.Element {
 
   const handleRotationUpdate = (
     spellId: number,
-    updates: Partial<Pick<Spell, keyof Spell>>,
+    updates: Partial<Pick<WarrSpell, keyof WarrSpell>>,
   ) => {
     setRotationSetup((prev) =>
       prev.map((spell) =>
-        spell.id === spellId ? ({ ...spell, ...updates } as Spell) : spell,
+        spell.id === spellId ? ({ ...spell, ...updates } as WarrSpell) : spell,
       ),
     );
   };
@@ -121,6 +130,7 @@ function Warrior(): React.JSX.Element {
 
   const resetGear = useCallback(() => {
     setGearSetup(getSavedSetup("gear"));
+    setEnchantSetup(getSavedSetup("enchants"));
   }, []);
 
   const handleGearUpdate = (slotName: string, gearPiece: Gear) => {
@@ -130,15 +140,30 @@ function Warrior(): React.JSX.Element {
     }));
   };
 
+  const [enchantSetup, setEnchantSetup] = useState<EnchantSetup>({});
+
+  const handleEnchantUpdate = (slotName: string, enchant: Enchant) => {
+    const isTempEnch = "temp" in enchant && enchant.temp;
+    setEnchantSetup((prev) => {
+      const [prevMain, prevTemp] = prev[slotName] || [null, null];
+      console.log(isTempEnch);
+
+      return {
+        ...prev,
+        [slotName]: isTempEnch ? [prevMain, enchant] : [enchant, prevTemp],
+      };
+    });
+  };
+
   const [runesSetup, setRunesSetup] = useState<{
     [key: string]: (Rune & {
       active: boolean;
     })[];
   }>({});
 
-  const resetRunes = () => {
+  const resetRunes = useCallback(() => {
     setRunesSetup(getSavedSetup("runes"));
-  };
+  }, []);
 
   const handleRunesUpdate = (
     runeId: number,
@@ -179,14 +204,14 @@ function Warrior(): React.JSX.Element {
     talentPointsRemaining: number;
   }>({ talents: [], talentPointsRemaining: settingsSetup.level as number });
 
-  const resetTalents = () => {
+  const resetTalents = useCallback(() => {
     setTalentsSetup(
       getSavedSetup(
         "talents",
         (settingsSetup.level as number) - 9 || defaultTalentPointsRemaining,
       ),
     );
-  };
+  }, [settingsSetup.level]);
 
   const handleTalentPointUpdate = (
     talentToUpdateId: number,
@@ -244,6 +269,8 @@ function Warrior(): React.JSX.Element {
     );
   };
 
+  const [report, setReport] = useState<Report | undefined>(undefined);
+
   useEffect(() => {
     setRotationSetup(getSavedSetup("rotation"));
     setGearSetup(getSavedSetup("gear"));
@@ -256,25 +283,22 @@ function Warrior(): React.JSX.Element {
       ),
     );
     setBuffsSetup(getSavedSetup("buffs"));
-  }, []);
-
-  useEffect(() => {
-    console.log(
-      getSavedSetup(
-        "talents",
-        (settingsSetup.level as number) || defaultTalentPointsRemaining + 9,
-      ),
-    );
-  }, []);
+  }, [settingsSetup.level]);
 
   useEffect(() => {
     resetBuffs();
     resetGear();
     resetRotation();
-    resetGear();
     resetRunes();
     resetTalents();
-  }, [settingsSetup.level, classicMode, resetBuffs, resetRotation, resetGear]);
+  }, [
+    classicMode,
+    resetBuffs,
+    resetRotation,
+    resetGear,
+    resetRunes,
+    resetTalents,
+  ]);
 
   function getFullConfig(): GetConfig {
     const playerConfig = getPlayerConfig(settingsSetup);
@@ -287,6 +311,7 @@ function Warrior(): React.JSX.Element {
       gear: gearSetup,
       buffs: buffsSetup,
       spells: rotationSetup,
+      enchants: enchantSetup,
     };
   }
   function getSimulationConfig(): SimulationConfig {
@@ -305,17 +330,16 @@ function Warrior(): React.JSX.Element {
       const fullConfig = getFullConfig(); // Use the current state configuration
       const player = new Player(fullConfig, undefined, undefined, undefined);
       if (!player.mh) throw { message: "No Mainhand Weapon Selected" };
+      console.log(player);
       const stats = Object.keys(player.stats).length
         ? player.stats
         : player.base;
       setCharacterStats(stats);
       const s = new Simulation(
         player,
-        (report) => {
+        (report: Report) => {
           report.player = player.serializeStats();
           report.spread = s.spread;
-          console.log("report");
-          console.log(report);
           const mean = report.totaldmg / report.totalduration;
           setSimulatedDPS(mean);
           const s1 = report.sumdps,
@@ -324,6 +348,7 @@ function Warrior(): React.JSX.Element {
           const varmean = (s2 - (s1 * s1) / n) / (n - 1) / n;
           const error = 1.97 * Math.sqrt(varmean);
           setSimulatedDpsError(error.toFixed(2));
+          setReport(report);
           console.log("time: " + (report.endtime - report.starttime) / 1000);
         },
         () => {},
@@ -401,12 +426,21 @@ function Warrior(): React.JSX.Element {
               gearSetup,
               handleGearUpdate,
               buttonFunctions: {
-                clear: () => setGearSetup(getClearedSetup("gear")),
+                clear: () => {
+                  setGearSetup(getClearedSetup("gear"));
+                  setEnchantSetup(getClearedSetup("enchants"));
+                },
                 reset: resetGear,
                 save: () => {
                   localStorage.setItem("gear", JSON.stringify(gearSetup));
+                  localStorage.setItem(
+                    "enchants",
+                    JSON.stringify(enchantSetup),
+                  );
                 },
               },
+              enchantSetup,
+              handleEnchantUpdate,
             }}
             runesProps={{
               runesSetup,
@@ -470,6 +504,7 @@ function Warrior(): React.JSX.Element {
               runesSetup,
               settingsSetup,
             }}
+            statsProps={{ report }}
           />
         </div>
       </div>

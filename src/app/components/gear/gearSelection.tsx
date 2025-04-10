@@ -6,8 +6,10 @@ import CustomizeButtons from "../customizeButtons";
 
 export default function GearSelection({
   gearSetup,
-  handleGearUpdate: updateGearSelection,
+  handleGearUpdate,
   buttonFunctions,
+  enchantSetup,
+  handleEnchantUpdate,
 }: GearSelectionProps) {
   return (
     <Card className="border-none rounded-none shadow-none text-2xl font-bold mb-6 text-center flex flex-col items-center">
@@ -21,14 +23,16 @@ export default function GearSelection({
       <CardContent>
         <div className="container mx-auto p-4">
           <div className="flex justify-center">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-48 max-w-2xl">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-48+ max-w-2xl">
               {gearSlotData.map((gearSlot) => {
                 return (
                   <GearSlot
                     key={gearSlot.slotName}
                     gearSlot={gearSlot}
                     selectedGear={gearSetup[gearSlot.gearJsSlotName]}
-                    updateGearSelection={updateGearSelection}
+                    handleGearUpdate={handleGearUpdate}
+                    handleEnchantUpdate={handleEnchantUpdate}
+                    selectedEnchants={enchantSetup[gearSlot.gearJsSlotName]}
                   />
                 );
               })}

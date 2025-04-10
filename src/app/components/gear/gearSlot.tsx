@@ -7,27 +7,33 @@ import GearSelectModal from "./gearSlotModal";
 import { GearSlotData } from "../../utils/types";
 import { imageDomain, WEB_DB_URL } from "../../utils/constants";
 import { Gear } from "@/app/sim_lib/gear";
+import EnchantSlot from "../enchantSlot";
+import { Enchant, enchants } from "@/app/sim_lib/enchants";
 
 interface GearSlotProps {
   gearSlot: GearSlotData;
   selectedGear: Gear | null;
-  updateGearSelection: (slotName: string, gearPiece: Gear) => void;
+  handleGearUpdate: (slotName: string, gearPiece: Gear) => void;
+  handleEnchantUpdate: (slotName: string, enchant: Enchant) => void;
+  selectedEnchants: [Enchant | null, Enchant | null];
 }
 
 export function GearSlot({
   gearSlot,
   selectedGear,
-  updateGearSelection,
+  handleGearUpdate,
+  handleEnchantUpdate,
+  selectedEnchants,
 }: GearSlotProps): React.JSX.Element {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isGearModalOpen, setIsGearModalOpen] = useState(false);
 
   function openGearSelectModal() {
-    setIsModalOpen(true);
+    setIsGearModalOpen(true);
   }
 
   function handleSelectGear(gear: Gear) {
-    updateGearSelection(gearSlot.gearJsSlotName, gear);
-    setIsModalOpen(false);
+    handleGearUpdate(gearSlot.gearJsSlotName, gear);
+    setIsGearModalOpen(false);
   }
 
   return (
@@ -37,7 +43,17 @@ export function GearSlot({
           className="relative w-12 h-12 flex items-center justify-center rounded-full mb-2"
           onClick={openGearSelectModal}
         >
-          <a href={selectedGear ? `${WEB_DB_URL}item=${selectedGear.id}` : ""}>
+          <a
+            href={
+              selectedGear
+                ? `${WEB_DB_URL}item=${selectedGear.id}${
+                    selectedEnchants[0]
+                      ? `?ench=${selectedEnchants[0].ench}`
+                      : ""
+                  }`
+                : ""
+            }
+          >
             <Image
               src={
                 selectedGear?.p
@@ -53,14 +69,22 @@ export function GearSlot({
           </a>
         </div>
         <div className="flex flex-col text-sm">
-          <span>{selectedGear ? selectedGear.name : gearSlot.slotName}</span>
-          <span>No enchant</span>
+          <span onClick={openGearSelectModal}>
+            {selectedGear ? selectedGear.name : gearSlot.slotName}
+          </span>
+          {gearSlot.gearJsSlotName in enchants && (
+            <EnchantSlot
+              gearSlotName={gearSlot.gearJsSlotName}
+              selectedEnchants={selectedEnchants}
+              handleEnchantUpdate={handleEnchantUpdate}
+            />
+          )}
         </div>
       </div>
 
       <GearSelectModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        isOpen={isGearModalOpen}
+        onClose={() => setIsGearModalOpen(false)}
         onSelectGear={handleSelectGear}
         gearSlot={gearSlot}
       />

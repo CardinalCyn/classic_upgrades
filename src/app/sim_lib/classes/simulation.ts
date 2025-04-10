@@ -1,6 +1,6 @@
 import { PlayerConfig, Report, TargetConfig } from "@/app/utils/types";
 import { Player } from "./player";
-import { Spell } from "../spells";
+import { WarrSpell } from "../spells";
 import { TalentTreeItem } from "../talents";
 import { sanitizeSimulationParams } from "@/app/utils/sim";
 import {
@@ -232,7 +232,7 @@ export type SimulationStartParams = {
   globals: {
     buffs: number[];
     enchant: {};
-    rotation: Spell[];
+    rotation: WarrSpell[];
     runes: {};
     sod: boolean;
     talents: TalentTreeItem[];

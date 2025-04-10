@@ -1,4 +1,6 @@
-export const gear = {
+import { Aura, Spell } from "./classes/spell";
+
+const originalGear = {
   head: [
     {
       name: "Dark Iron Helm",
@@ -9778,4 +9780,28 @@ export const gear = {
   ],
 };
 
-export type Gear = (typeof gear)[keyof typeof gear][number] & { p: string };
+export type Gear = (typeof gear)[keyof typeof gear][number];
+
+export const gear = Object.fromEntries(
+  Object.entries(originalGear).map(([slotName, items]) => [
+    slotName,
+    items.map((item) => ({ ...item, p: ("p" in item && item.p) || "" })),
+  ]),
+);
+
+export type Proc = {
+  chance: number;
+  magicdmg?: number;
+  physdmg?: number;
+  binaryspell?: boolean;
+  procgcd?: boolean;
+  coeff?: number;
+  gcd?: boolean;
+  extra?: number;
+  tick?: number;
+  bleed?: boolean;
+  phantom?: boolean;
+  duration?: string;
+  interval?: string;
+  spell?: Aura;
+};

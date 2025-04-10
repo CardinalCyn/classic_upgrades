@@ -1604,4 +1604,4 @@ export const spells = [
   },
 ];
 
-export type Spell = (typeof spells)[number] & { active?: boolean };
+export type WarrSpell = (typeof spells)[number] & { active?: boolean };

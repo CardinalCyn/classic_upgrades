@@ -1,7 +1,10 @@
 import { Buff } from "../sim_lib/buffs";
+import { Aura, Spell } from "../sim_lib/classes/spell";
+import { Weapon } from "../sim_lib/classes/weapon";
+import { Enchant } from "../sim_lib/enchants";
 import { Gear } from "../sim_lib/gear";
 import { Rune } from "../sim_lib/runes";
-import { Spell } from "../sim_lib/spells";
+import { WarrSpell } from "../sim_lib/spells";
 import { TalentTreeItem } from "../sim_lib/talents";
 import { races } from "./constants";
 
@@ -57,14 +60,26 @@ export type SettingsField =
 
 export type Race = (typeof races)[number];
 
+export type RotationSetup = WarrSpell[];
+export type GearSetup = { [key: string]: Gear | null };
+export type RunesSetup = {
+  [key: string]: (Rune & { active: boolean })[];
+};
+export type SettingsSetup = {
+  [key: string]: boolean | number | string;
+};
+export type TalentsSetup = {
+  talents: TalentTreeItem[];
+  talentPointsRemaining: number;
+};
+export type BuffsSetup = (Buff & { active: boolean })[];
+export type EnchantSetup = { [key: string]: [Enchant | null, Enchant | null] };
 export type GearSelectionProps = {
-  gearSetup: { [key: string]: Gear | null };
+  gearSetup: GearSetup;
   handleGearUpdate: (slotName: string, gearPiece: Gear) => void;
   buttonFunctions: ButtonFunctions;
-};
-
-type SettingsSetup = {
-  [key: string]: boolean | number | string;
+  enchantSetup: EnchantSetup;
+  handleEnchantUpdate: (slotName: string, enchant: Enchant) => void;
 };
 
 export type SettingsProps = {
@@ -77,7 +92,7 @@ export type SettingsProps = {
 };
 
 export type TalentsProps = {
-  talentsSetup: { talents: TalentTreeItem[]; talentPointsRemaining: number };
+  talentsSetup: TalentsSetup;
   handleTalentPointUpdate: (
     talentToUpdateId: number,
     operation: "add" | "remove",
@@ -89,22 +104,22 @@ export type RotationProps = {
   classicMode: ClassicMode;
   playerLevel: number;
   settingsSetup: SettingsSetup;
-  rotationSetup: Spell[];
-  handleRotationUpdate: (spellId: number, updates: Partial<Spell>) => void;
+  rotationSetup: RotationSetup;
+  handleRotationUpdate: (spellId: number, updates: Partial<WarrSpell>) => void;
   buttonFunctions: ButtonFunctions;
-  runesSetup: { [key: string]: (Rune & { active: boolean })[] };
-  gearSetup: { [key: string]: Gear | null };
+  runesSetup: RunesSetup;
+  gearSetup: GearSetup;
 };
 
 export type BuffsProps = {
   classicMode: ClassicMode;
   playerLevel: number;
   initTargetArmor: number;
-  buffsSetup: (Buff & { active: boolean })[];
+  buffsSetup: BuffsSetup;
   buttonFunctions: ButtonFunctions;
   handleBuffUpdate: (buffId: number, toggle: boolean) => void;
   settingsSetup: SettingsSetup;
-  runesSetup: { [key: string]: (Rune & { active: boolean })[] };
+  runesSetup: RunesSetup;
 };
 
 export type ButtonFunctions = {
@@ -114,13 +129,38 @@ export type ButtonFunctions = {
 };
 
 export type RunesProps = {
-  runesSetup: { [key: string]: (Rune & { active: boolean })[] };
+  runesSetup: RunesSetup;
   handleRunesUpdate: (
     runeId: number,
     toggle: boolean,
     runeSlotName: string,
   ) => void;
   buttonFunctions: ButtonFunctions;
+};
+
+export type StatsProps = {
+  report: Report | undefined;
+};
+export type Report = {
+  endtime: number;
+  iterations: number;
+  maxdps: number;
+  mindps: number;
+  starttime: number;
+  sumdps: number;
+  sumdps2: number;
+  totaldmg: number;
+  totalduration: number;
+  player: {
+    auras: { [key: string]: Aura };
+    spells: { [key: string]: Spell };
+    mh: Weapon;
+    oh: Weapon | null;
+    bloodsurge?: boolean;
+  };
+  spread: {
+    [key: number]: number;
+  };
 };
 
 export type TargetConfig = {
@@ -132,6 +172,10 @@ export type TargetConfig = {
   mindmg: number;
   maxdmg: number;
   bleedreduction: number;
+  misschance?: number;
+  mitigation?: number;
+  binaryresist?: number;
+  dodge?: number;
 };
 export type PlayerConfig = {
   level: number;
@@ -148,19 +192,8 @@ export type GetConfig = {
   playerConfig: PlayerConfig;
   targetConfig: TargetConfig;
   talents: TalentTreeItem[];
-  gear: { [key: string]: Gear | null };
+  gear: GearSetup;
+  enchants: EnchantSetup;
   buffs: (Buff & { active: boolean })[];
-  spells: Spell[];
-};
-
-export type Report = {
-  endtime: number;
-  iterations: number;
-  maxdps: number;
-  mindps: number;
-  starttime: number;
-  sumdps: number;
-  sumdps2: number;
-  totaldmg: number;
-  totalduration: number;
+  spells: RotationSetup;
 };

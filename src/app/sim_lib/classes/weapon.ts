@@ -1,3 +1,7 @@
+import { BuffsSetup } from "@/app/utils/types";
+import { Enchant } from "../enchants";
+import { Gear, Proc } from "../gear";
+import { Player } from "./player";
 import { rng } from "./simulation";
 import * as Classes from "./spell";
 
@@ -19,20 +23,51 @@ export const WEAPONTYPE = {
 };
 
 export class Weapon {
-  constructor(player, item, enchant, tempenchant, offhand, twohand, buffs) {
+  data: [number, number, number, number, number];
+  totaldmg: number;
+  totalprocdmg: number;
+  timer: number;
+  speed: number;
+  player: Player;
+  id: number;
+  name: string;
+  mindmg: number;
+  maxdmg: number;
+  basemindmg: number;
+  basemaxdmg: number;
+  type: string | number;
+  modifier: number;
+  normSpeed: number;
+  offhand: boolean;
+  twohand: boolean;
+  crit: number;
+  basebonusdmg: number;
+  bonusdmg: number;
+  proc1?: Proc;
+  proc2?: Proc;
+  windfury?: Classes.Windfury;
+  constructor(
+    player: Player,
+    item: Gear,
+    enchant: Enchant,
+    tempenchant: Enchant,
+    offhand: boolean,
+    twohand: boolean,
+    buffs: BuffsSetup,
+  ) {
     this.player = player;
     this.id = item.id;
     this.name = item.name;
-    this.mindmg = item.mindmg;
-    this.maxdmg = item.maxdmg;
-    this.basemindmg = item.mindmg;
-    this.basemaxdmg = item.maxdmg;
-    this.type = item.type;
+    this.mindmg = ("mindmg" in item && item.mindmg) || 0;
+    this.maxdmg = ("maxdmg" in item && item.maxdmg) || 0;
+    this.basemindmg = ("mindmg" in item && item.mindmg) || 0;
+    this.basemaxdmg = ("maxdmg" in item && item.maxdmg) || 0;
+    this.type = ("type" in item && item.type) || "";
     this.modifier = offhand
       ? 0.5 * (1 + player.talents.offmod) * (1 + player.talents.onemod)
       : 1 + player.talents.onemod;
     if (twohand) this.modifier = 1 + player.talents.twomod;
-    this.speed = item.speed;
+    this.speed = ("speed" in item && item.speed) || 0;
     this.timer = 0;
     this.normSpeed = 2.4;
     this.offhand = offhand;
@@ -40,7 +75,11 @@ export class Weapon {
     this.crit = 0;
     this.basebonusdmg = 0;
     this.bonusdmg = 0;
-    this.type = WEAPONTYPE[item.type.replace(" ", "").toUpperCase()] || 0;
+    const itemType = this.type;
+    this.type =
+      WEAPONTYPE[
+        itemType.replace(" ", "").toUpperCase() as keyof typeof WEAPONTYPE
+      ] || 0;
     this.totaldmg = 0;
     this.totalprocdmg = 0;
     this.data = [0, 0, 0, 0, 0];
@@ -50,75 +89,108 @@ export class Weapon {
     if (this.type == WEAPONTYPE.DAGGER) this.normSpeed = 1.7;
     if (this.twohand) this.normSpeed = 3.3;
 
-    if (item.proc) {
-      this.proc1 = {};
-      this.proc1.chance = item.proc.chance
-        ? item.proc.chance * 100
-        : ~~((item.speed * (item.proc.ppm || 1)) / 0.006);
-      if (item.proc.dmg && !item.proc.magic) this.proc1.physdmg = item.proc.dmg;
-      if (item.proc.dmg && item.proc.magic) this.proc1.magicdmg = item.proc.dmg;
-      if (item.proc.binaryspell) this.proc1.binaryspell = true;
-      if (item.proc.coeff) this.proc1.coeff = parseInt(item.proc.coeff);
-      if (item.proc.procgcd) this.proc1.gcd = item.proc.procgcd;
-      if (item.proc.extra) this.proc1.extra = item.proc.extra;
+    if ("proc" in item && item.proc) {
+      this.proc1 = {} as Proc;
+      const itemProc = item.proc;
+      if (!("speed" in item) || !item.speed) return;
+      this.proc1.chance =
+        "chance" in itemProc && itemProc
+          ? itemProc.chance * 100
+          : ~~((item.speed * (itemProc.ppm || 1)) / 0.006);
+      if (itemProc.dmg && !itemProc.magic) this.proc1.physdmg = itemProc.dmg;
+      if (itemProc.dmg && itemProc.magic) this.proc1.magicdmg = itemProc.dmg;
+      if ("binaryspell" in itemProc && itemProc.binaryspell)
+        this.proc1.binaryspell = true;
+      if ("coeff" in itemProc && itemProc.coeff)
+        this.proc1.coeff = itemProc.coeff;
+      if ("procgcd" in itemProc && itemProc.procgcd)
+        this.proc1.gcd = itemProc.procgcd;
+      if ("extra" in itemProc && itemProc.extra)
+        this.proc1.extra = itemProc.extra;
       if (
-        item.proc.dmg &&
-        !item.proc.magic &&
-        !item.proc.tick &&
+        itemProc.dmg &&
+        !itemProc.magic &&
+        (!("tick" in itemProc) || !itemProc.tick) &&
         item.id != 231848
       )
         this.proc1.phantom = true;
 
       // dont need an aura, just add the dmg
-      if (item.proc.tick && !item.proc.bleed) {
-        let ticks = parseInt(item.proc.duration) / parseInt(item.proc.interval);
-        if (item.proc.magic)
-          this.proc1.magicdmg = (item.proc.dmg || 0) + item.proc.tick * ticks;
-        else this.proc1.physdmg = (item.proc.dmg || 0) + item.proc.tick * ticks;
+      if (
+        "tick" in itemProc &&
+        itemProc.tick &&
+        (!("bleed" in itemProc) || !itemProc.bleed) &&
+        "duration" in itemProc &&
+        "interval" in itemProc
+      ) {
+        const tick = itemProc.tick as number;
+        let ticks =
+          parseInt(itemProc.duration as string) /
+          parseInt(itemProc.interval as string);
+        if (itemProc.magic)
+          this.proc1.magicdmg = (itemProc.dmg || 0) + tick * ticks;
+        else this.proc1.physdmg = (itemProc.dmg || 0) + tick * ticks;
       }
       // bleeds need aura
-      if (item.proc.tick && item.proc.bleed) {
+      if (
+        "tick" in itemProc &&
+        itemProc.tick &&
+        "bleed" in itemProc &&
+        itemProc.bleed &&
+        "duration" in itemProc &&
+        "interval" in itemProc
+      ) {
         player.auras["weaponbleed" + (this.offhand ? "oh" : "mh")] =
-          new WeaponBleed(
+          new Classes.WeaponBleed(
             player,
             0,
-            item.proc.duration,
-            item.proc.interval,
-            item.proc.tick,
+            itemProc.duration as string,
+            itemProc.interval as string,
+            itemProc.tick as number,
             this.offhand,
           );
         this.proc1.spell =
           player.auras["weaponbleed" + (this.offhand ? "oh" : "mh")];
       }
       // custom spells
-      if (item.proc.spell) {
-        if (!player.auras[item.proc.spell.toLowerCase()]) {
-          const ClassConstructor = Classes[item.proc.spell];
+      if ("spell" in itemProc && itemProc.spell) {
+        if (!player.auras[itemProc.spell.toLowerCase()]) {
+          const ClassConstructor =
+            Classes[itemProc.spell as keyof typeof Classes];
           if (ClassConstructor) {
-            player.auras[item.proc.spell.toLowerCase()] = new ClassConstructor(
+            player.auras[itemProc.spell.toLowerCase()] = new ClassConstructor(
               player,
-            );
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+            ) as Classes.Aura;
           } else {
             console.error(`Class ${item.proc.spell} not found`);
           }
         }
-        this.proc1.spell = player.auras[item.proc.spell.toLowerCase()];
+        this.proc1.spell = player.auras[itemProc.spell.toLowerCase()];
       }
     }
 
-    if (enchant && (enchant.ppm || enchant.chance)) {
-      this.proc2 = {};
+    if (
+      enchant &&
+      (("ppm" in enchant && enchant.ppm) ||
+        ("chance" in enchant && enchant.chance))
+    ) {
+      this.proc2 = {} as Proc;
       if (enchant.ppm)
         this.proc2.chance = ~~((this.speed * enchant.ppm) / 0.006);
       if (enchant.chance) this.proc2.chance = enchant.chance * 100;
       if (enchant.magicdmg) this.proc2.magicdmg = enchant.magicdmg;
       if (enchant.procspell && !offhand) {
-        player.auras.crusader1 = new Crusader(player);
+        player.auras.crusader1 = new Classes.Crusader(player, undefined);
         player.auras.crusader1.name = "Crusader (MH)";
         this.proc2.spell = player.auras.crusader1;
       }
       if (enchant.procspell && offhand) {
-        player.auras.crusader2 = new Crusader(player);
+        player.auras.crusader2 = new Classes.Crusader(player, undefined);
         player.auras.crusader2.name = "Crusader (OH)";
         this.proc2.spell = player.auras.crusader2;
       }
@@ -127,8 +199,11 @@ export class Weapon {
     for (let buff of buffs) {
       if (buff.group == "windfury" && buff.active) {
         if (!this.player.auras.windfury && !this.offhand) {
-          this.player.auras.windfury = new Windfury(this.player, buff.id);
-          this.windfury = this.player.auras.windfury;
+          this.player.auras.windfury = new Classes.Windfury(
+            this.player,
+            buff.id,
+          );
+          this.windfury = this.player.auras.windfury as Classes.Windfury;
         }
       }
     }
@@ -137,9 +212,10 @@ export class Weapon {
       !this.windfury &&
       !this.proc2 &&
       tempenchant &&
-      (tempenchant.ppm || tempenchant.chance)
+      (("ppm" in tempenchant && tempenchant.ppm) ||
+        ("chance" in tempenchant && tempenchant.chance))
     ) {
-      this.proc2 = {};
+      this.proc2 = {} as Proc;
       if (tempenchant.ppm)
         this.proc2.chance = ~~((this.speed * tempenchant.ppm) / 0.006);
       if (tempenchant.chance) this.proc2.chance = tempenchant.chance * 100;
@@ -147,20 +223,27 @@ export class Weapon {
     }
 
     for (let buff of buffs)
-      if (buff.bonusdmg && buff.active) this.basebonusdmg += buff.bonusdmg;
-    if (enchant && enchant.bonusdmg) this.basebonusdmg += enchant.bonusdmg;
-    if (!this.windfury && tempenchant && tempenchant.bonusdmg)
+      if ("bonusdmg" in buff && buff.bonusdmg && buff.active)
+        this.basebonusdmg += buff.bonusdmg as number;
+    if (enchant && "bonusdmg" in enchant && enchant.bonusdmg)
+      this.basebonusdmg += enchant.bonusdmg;
+    if (
+      !this.windfury &&
+      tempenchant &&
+      "bonusdmg" in tempenchant &&
+      tempenchant.bonusdmg
+    )
       this.basebonusdmg += tempenchant.bonusdmg;
     this.bonusdmg = this.basebonusdmg;
   }
-  dmg(heroicstrike) {
+  dmg(heroicstrike: Classes.Spell) {
     let dmg;
     let mod = 1;
     dmg =
       rng(this.mindmg + this.bonusdmg, this.maxdmg + this.bonusdmg) +
       (this.player.stats.ap / 14) * this.speed +
       this.player.stats.moddmgdone;
-    if (heroicstrike) dmg += heroicstrike.bonus;
+    if (heroicstrike) dmg += heroicstrike.bonus as number;
     if (
       heroicstrike &&
       heroicstrike instanceof Classes.HeroicStrike &&
@@ -191,7 +274,7 @@ export class Weapon {
     )
       this.player.spells.slam.mhthreshold = this.timer - 1000;
   }
-  step(next) {
+  step(next: number) {
     this.timer -= next;
   }
 }

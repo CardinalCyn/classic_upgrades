@@ -1,4 +1,4 @@
-export const enchant = {
+export const originalEnchants = {
   mainhand: [
     {
       id: 211845,
@@ -1458,3 +1458,15 @@ export const sets = [
     bonus: [{ count: 3, stats: { shockwavecd: true } }],
   },
 ];
+
+export type Enchant = (typeof enchants)[keyof typeof enchants][number];
+
+export const enchants = Object.fromEntries(
+  Object.entries(originalEnchants).map(([slotName, items]) => [
+    slotName,
+    items.map((item) => ({
+      ...item,
+      temp: ("temp" in item && item.temp) || false,
+    })),
+  ]),
+);

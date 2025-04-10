@@ -1,11 +1,39 @@
 import { buffs } from "../buffs";
 import { spells } from "../spells";
+import { Player } from "./player";
 import { DEFENSETYPE, RESULT, rng10k, SCHOOL, rng } from "./simulation";
+import { Weapon } from "./weapon";
 
 var step = 0;
 
 export class Spell {
-  constructor(player, id, name) {
+  id: number;
+  timer: number;
+  cost: number;
+  cooldown: number;
+  player: Player;
+  refund: boolean;
+  canDodge: boolean;
+  totaldmg: number;
+  data: number[];
+  name: string;
+  useonly: boolean;
+  maxdelay: number;
+  weaponspell: boolean;
+  defenseType: number;
+  school: number;
+  minrage: number;
+  maxrage: number | undefined;
+  offensive: boolean;
+  maincd: number | undefined;
+  value1: number | undefined;
+  value2: number | undefined;
+  totalusedrage: number | undefined;
+  mhthreshold?: number;
+  afterswing?: boolean;
+  bonus?: number;
+
+  constructor(player: Player, id: number, name?: string) {
     this.id = id;
     this.timer = 0;
     this.cost = 0;
@@ -22,21 +50,31 @@ export class Spell {
     this.defenseType = DEFENSETYPE.MELEE;
     this.school = SCHOOL.PHYSICAL;
     this.minrage = 0;
+    this.maxrage = undefined;
     this.offensive = true;
+    this.maincd = undefined;
+    this.value1 = undefined;
+    this.value2 = undefined;
 
     let spell = spells.filter((s) => s.id == this.id)[0];
     if (!spell) return;
-    if (spell.minrageactive) this.minrage = parseInt(spell.minrage);
-    if (spell.maxrageactive) this.maxrage = parseInt(spell.maxrage);
-    if (spell.maincdactive) this.maincd = parseInt(spell.maincd) * 1000;
-    if (spell.cooldown) this.cooldown = parseInt(spell.cooldown) || 0;
+    if (spell.minrageactive) this.minrage = Number(spell.minrage);
+    if (spell.maxrageactive) this.maxrage = Number(spell.maxrage);
+    if (spell.maincdactive) this.maincd = Number(spell.maincd) * 1000;
+    if (spell.cooldown) this.cooldown = Number(spell.cooldown) || 0;
     if (spell.durationactive)
-      this.cooldown = Math.max(parseInt(spell.duration), this.cooldown);
-    if (spell.value1) this.value1 = parseInt(spell.value1);
-    if (spell.value2) this.value2 = parseInt(spell.value2);
-    if (spell.priorityapactive) this.priorityap = parseInt(spell.priorityap);
+      this.cooldown = Math.max(Number(spell.duration), this.cooldown);
+    if (spell.value1) this.value1 = Number(spell.value1);
+    if (spell.value2) this.value2 = Number(spell.value2);
+    if (
+      "priorityapactive" in spell &&
+      spell.priorityapactive &&
+      "priorityap" in spell &&
+      spell.priorityap
+    )
+      this.priorityap = Number(spell.priorityap);
     if (spell.consumedrage) this.consumedrage = spell.consumedrage;
-    if (spell.unqueueactive) this.unqueue = parseInt(spell.unqueue);
+    if (spell.unqueueactive) this.unqueue = Number(spell.unqueue);
     if (spell.exmacro) this.exmacro = spell.exmacro;
     if (spell.globalsactive) this.globals = spell.globals;
     if (spell.afterswing) this.afterswing = spell.afterswing;
@@ -80,7 +118,7 @@ export class Spell {
     this.timer = this.cooldown * 1000;
     this.maxdelay = rng(this.player.reactionmin, this.player.reactionmax);
   }
-  step(a) {
+  step(a: number) {
     if (this.timer <= a) {
       this.timer = 0;
       /* start-log */ if (this.player.logging)
@@ -102,7 +140,7 @@ export class Spell {
 }
 
 export class Bloodthirst extends Spell {
-  constructor(player, id) {
+  constructor(player: Player, id: number) {
     super(player, id);
     this.cost = 30 - player.ragecostbonus;
     this.cooldown = 6;
@@ -124,7 +162,8 @@ export class Bloodthirst extends Spell {
 }
 
 export class Whirlwind extends Spell {
-  constructor(player, id) {
+  offhandhit?: boolean;
+  constructor(player: Player, id: number) {
     super(player, id);
     this.cost = 25 - player.ragecostbonus - (player.whirlwindcost || 0);
     this.cooldown = 10;
@@ -297,7 +336,7 @@ export class Execute extends Spell {
     this.timer = 1 - (step % 1);
     this.maxdelay = rng(this.player.reactionmin, this.player.reactionmax);
   }
-  step(a) {
+  step(a: number) {
     if (this.timer <= a) {
       this.timer = 0;
     } else {
@@ -354,6 +393,7 @@ export class Bloodrage extends Spell {
 }
 
 export class HeroicStrike extends Spell {
+  bonus: number;
   constructor(player, id) {
     super(player, id, "Heroic Strike");
     this.cost = 15 - player.talents.impheroicstrike - player.ragecostbonus;
@@ -700,7 +740,7 @@ export class QuickStrike extends Spell {
 }
 
 export class RagePotion extends Spell {
-  constructor(player, id) {
+  constructor(player: Player, id: number) {
     super(player, id, "Rage Potion");
     this.cost = 0;
     this.minrage = 80;
@@ -708,7 +748,7 @@ export class RagePotion extends Spell {
     this.useonly = true;
     this.offensive = false;
   }
-  prep(duration) {
+  prep(duration: number) {
     if (typeof this.timetoend !== "undefined")
       this.usestep = Math.max(duration - this.timetoend, 0);
     if (typeof this.timetostart !== "undefined")
@@ -1138,6 +1178,10 @@ export class GrilekFury extends Spell {
 /**************************************************** AURAS ****************************************************/
 
 export class Aura {
+  name: string;
+  uptime: number;
+  timer: number;
+  proc?: () => void;
   constructor(player, id, name) {
     this.id = id;
     this.timer = 0;
@@ -1183,7 +1227,7 @@ export class Aura {
     if (spell.priority) this.priority = parseInt(spell.priority);
     if (spell.expriority) this.expriority = parseInt(spell.expriority);
   }
-  use() {
+  use(...args: any[]) {
     if (this.timer) this.uptime += step - this.starttimer;
     this.timer = step + this.duration * 1000;
     this.starttimer = step;
@@ -1272,7 +1316,7 @@ export class Recklessness extends Aura {
 }
 
 export class Flurry extends Aura {
-  constructor(player, id = undefined) {
+  constructor(player, id) {
     super(player, id);
     this.duration = 12;
     this.mult_stats = { haste: player.talents.flurry };
@@ -1300,7 +1344,11 @@ export class Flurry extends Aura {
 }
 
 export class DeepWounds extends Aura {
-  constructor(player, id, adjacent) {
+  constructor(
+    player: Player,
+    id: number | undefined | null,
+    adjacent?: number,
+  ) {
     super(player, id, "Deep Wounds" + (adjacent ? " " + adjacent : ""));
     this.duration = 12;
     this.idmg = 0;
@@ -1308,7 +1356,7 @@ export class DeepWounds extends Aura {
     this.saveddmg = 0;
     this.ticksleft = 0;
   }
-  tickdmg(offhand) {
+  tickdmg(offhand?: Weapon) {
     let min;
     let max;
     if (!offhand) {
@@ -1371,7 +1419,7 @@ export class DeepWounds extends Aura {
         this.player.log(`${this.name} removed`); /* end-log */
     }
   }
-  use(offhand) {
+  use(offhand?: Weapon) {
     if (this.timer) this.uptime += step - this.starttimer;
     this.ticksleft = 4;
     this.saveddmg += this.tickdmg(offhand);
@@ -2360,6 +2408,10 @@ export class ConsumedRage extends Aura {
 }
 
 export class Rend extends Aura {
+  data: [number, number, number, number, number];
+  totaldmg: number;
+  totalcost: number;
+  cost: number;
   constructor(player, id) {
     super(player, id);
     let dur = this.value2 * 3;

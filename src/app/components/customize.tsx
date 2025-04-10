@@ -9,6 +9,7 @@ import {
   RotationProps,
   RunesProps,
   SettingsProps,
+  StatsProps,
   TalentsProps,
 } from "../utils/types";
 import { defaultTargetBaseArmor, tabs } from "../utils/constants";
@@ -16,6 +17,7 @@ import Rotation from "./rotation";
 import Buffs from "./buffs";
 
 import Runes from "./runes";
+import Stats from "./stats";
 
 type CustomizeProps = {
   classicMode: ClassicMode;
@@ -25,6 +27,7 @@ type CustomizeProps = {
   rotationProps: RotationProps;
   buffsProps: BuffsProps;
   runesProps: RunesProps;
+  statsProps: StatsProps;
 };
 
 function Customize({
@@ -35,6 +38,7 @@ function Customize({
   rotationProps,
   buffsProps,
   runesProps,
+  statsProps,
 }: CustomizeProps) {
   return (
     <Tabs className="border-none" defaultValue="gear">
@@ -59,6 +63,8 @@ function Customize({
           gearSetup={gearSelectionProps.gearSetup}
           handleGearUpdate={gearSelectionProps.handleGearUpdate}
           buttonFunctions={gearSelectionProps.buttonFunctions}
+          enchantSetup={gearSelectionProps.enchantSetup}
+          handleEnchantUpdate={gearSelectionProps.handleEnchantUpdate}
         />
       </TabsContent>
       <TabsContent className="border-none" value="settings">
@@ -111,6 +117,9 @@ function Customize({
           />
         </TabsContent>
       )}
+      <TabsContent className="border-none" value="stats">
+        <Stats report={statsProps.report} />
+      </TabsContent>
     </Tabs>
   );
 }

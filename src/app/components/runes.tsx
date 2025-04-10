@@ -19,7 +19,10 @@ function Runes({ runesSetup, handleRunesUpdate, buttonFunctions }: RunesProps) {
         <div className={`grid grid-cols-1 gap-2`}>
           {runeSlotData.map((slotName, slotIndex) => (
             <div key={slotName} className="text-center">
-              <h3>{slotName[0].toUpperCase() + slotName.slice(1)}</h3>
+              <h3>
+                {slotName.toString()[0].toUpperCase() +
+                  slotName.toString().slice(1).toLowerCase()}
+              </h3>
               <div className="flex items-center justify-center gap-2">
                 {runesSetup[slotName].map((rune, runeIndex) => {
                   return rune ? (
@@ -28,7 +31,7 @@ function Runes({ runesSetup, handleRunesUpdate, buttonFunctions }: RunesProps) {
                       rune={rune}
                       runeStatus={rune.active}
                       updateruneSelection={handleRunesUpdate}
-                      runeSlotName={slotName}
+                      runeSlotName={slotName.toString()}
                     />
                   ) : (
                     <div key={`empty-${slotIndex}-${runeIndex}`} />

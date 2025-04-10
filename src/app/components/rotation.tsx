@@ -1,8 +1,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-import { Button } from "@/components/ui/button";
-import { Spell } from "../sim_lib/spells";
+import { WarrSpell } from "../sim_lib/spells";
 import { RotationProps } from "../utils/types";
 import RotationIcon from "./rotationIcon";
 import CustomizeButtons from "./customizeButtons";
@@ -20,25 +19,25 @@ function Rotation({
   const spellSections = [
     {
       title: "Abilities",
-      filter: (spell: Spell) => {
+      filter: (spell: WarrSpell) => {
         return !spell.buff && !spell.item;
       },
     },
     {
       title: "Buffs",
-      filter: (spell: Spell) => {
+      filter: (spell: WarrSpell) => {
         return spell.buff;
       },
     },
     {
       title: "Items",
-      filter: (spell: Spell) => {
+      filter: (spell: WarrSpell) => {
         return spell.item;
       },
     },
   ];
 
-  function levelFilter(spell: Spell): boolean {
+  function levelFilter(spell: WarrSpell): boolean {
     const minLevel = spell.minlevel;
     if (!minLevel && minLevel !== 0) return true;
     if (spell.minlevel > playerLevel) return false;
@@ -48,12 +47,12 @@ function Rotation({
     return true;
   }
 
-  function aqBooksFilter(spell: Spell): boolean {
+  function aqBooksFilter(spell: WarrSpell): boolean {
     if (!spell.aq && spell.aq !== false) return true;
     return spell.aq === settingsSetup.aqbooks;
   }
 
-  function runesFilter(spell: Spell): boolean {
+  function runesFilter(spell: WarrSpell): boolean {
     if (!spell.rune) return true;
 
     for (const prop in runesSetup) {
@@ -65,7 +64,7 @@ function Rotation({
     return true;
   }
 
-  function gearFilter(spell: Spell): boolean {
+  function gearFilter(spell: WarrSpell): boolean {
     if (!spell.item) return true;
 
     for (const slot in gearSetup) {
