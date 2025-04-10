@@ -42,7 +42,6 @@ function EnchantModal({
   const handleSelectEnchant = useCallback(
     (enchant: Enchant, e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
       try {
-        console.log(isTemp);
         e.preventDefault();
         onSelectEnchant(enchant);
         onClose();

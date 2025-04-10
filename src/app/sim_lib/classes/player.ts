@@ -95,6 +95,8 @@ export class Player {
       spells: props.spells,
     };
   }
+  armorReduction: number;
+  stance?: string;
   rage: number;
   level: number;
   ragemod: number;
@@ -142,12 +144,15 @@ export class Player {
   bloodsurge: boolean | undefined;
   testEnchType: undefined;
   testEnch: undefined;
-  testTempEnch: number;
-  testTempEnchType: string;
+  testTempEnch: number | undefined;
+  testTempEnchType: string | undefined;
+  devastate: boolean | undefined;
+  shield: Gear | undefined;
+  heroicbonus?: boolean;
 
   constructor(
     conf: GetConfig,
-    testItem: undefined,
+    testItem: undefined | number,
     testType: undefined,
     enchtype: undefined,
   ) {
@@ -470,7 +475,7 @@ export class Player {
       if (item.id == 234147) this.base["moddmgdone"] += 4;
 
       if (item.id == 228122)
-        this.spells.themoltencore = new Classes.TheMoltenCore(this);
+        this.spells.themoltencore = new Classes.TheMoltenCore(this, undefined);
 
       if ("tw" in item && item.tw) this.timeworn++;
 
@@ -836,7 +841,7 @@ export class Player {
       this.timeworn = 0;
     }
   }
-  addSpells(testItem, spells: WarrSpell[]) {
+  addSpells(testItem: number | undefined, spells: WarrSpell[]) {
     this.preporder = [];
     for (let spell of spells) {
       if (
@@ -1301,12 +1306,14 @@ export class Player {
     if (this.target.level - this.level >= 3) crit -= 1.8;
     return Math.max(crit, 0);
   }
-  getDodgeChance(weapon) {
+  getDodgeChance(weapon: Weapon) {
     return Math.max(
       5 -
         this.stats.expertise -
         this.target.dodge +
-        (this.target.defense - this.stats["skill_" + weapon.type]) * 0.1,
+        (this.target.defense -
+          this.stats[("skill_" + weapon.type) as keyof typeof this.stats]) *
+          0.1,
       0,
     );
   }
